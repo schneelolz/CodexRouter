@@ -1,0 +1,3452 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "CodexRouter 管理接口",
+    "version": "1.8.0",
+    "description": "同源本机管理 API。状态为最近结果，密钥只写；供应商按标识隔离凭据、基址与模型覆盖。"
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "SessionCookie": []
+    }
+  ],
+  "paths": {
+    "/api/v1/daily": {
+      "get": {
+        "operationId": "getDaily",
+        "responses": {
+          "200": {
+            "description": "日常配置状态，不代表实际请求",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源拒绝",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/daily/preview": {
+      "post": {
+        "operationId": "previewDaily",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DailyAction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "单次字段变更预览",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "CSRF拒绝",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "配置冲突或不支持",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "功能不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/daily/apply": {
+      "post": {
+        "operationId": "applyDaily",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DailyApply"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "配置已应用，需手动重开客户端",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "CSRF拒绝",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "确认过期、配置变化或写失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "功能不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/activity": {
+      "get": {
+        "operationId": "getActivity",
+        "responses": {
+          "200": {
+            "description": "本进程实际收到的脱敏请求",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Activity"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源拒绝",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/providers/save": {
+      "post": {
+        "operationId": "saveRelayProvider",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderSaveInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "供应商信息和密钥均保存成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Provider"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "管理认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源或CSRF拒绝",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "供应商不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "供应商锁定或缺少密钥",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "状态保存或凭据恢复失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "凭据存储不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/providers/models": {
+      "post": {
+        "operationId": "queryRelayModels",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelQueryInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "只返回可显示的模型ID；不代表生成通过",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Models"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "地址或密钥无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "管理认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源或CSRF拒绝",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "供应商不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "修改地址后须重新输入密钥",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "上游认证、协议、连接或超时失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "凭据存储不可用或查询并发已满",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clients": {
+      "get": {
+        "operationId": "getClients",
+        "responses": {
+          "200": {
+            "description": "专用客户端状态，不含认证内容",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Clients"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源或Host拒绝",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clients/action": {
+      "post": {
+        "operationId": "clientAction",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientAction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "固定动作已执行；启动不代表真实生成通过",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Clients"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "无效动作",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "CSRF或来源拒绝",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "客户端正在运行、配置冲突或动作失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "当前实例未提供客户端管理",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/capabilities": {
+      "get": {
+        "operationId": "getCapabilities",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Capabilities"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源、Host 或 CSRF 检查失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "存储或凭据失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "服务暂不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/status": {
+      "get": {
+        "operationId": "getStatus",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源、Host 或 CSRF 检查失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "存储或凭据失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "服务暂不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/config": {
+      "get": {
+        "operationId": "getConfig",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Config"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源、Host 或 CSRF 检查失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "存储或凭据失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "服务暂不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "saveConfig",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Config"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源、Host 或 CSRF 检查失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "默认供应商或超时不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "存储或凭据失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "服务暂不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/providers": {
+      "get": {
+        "operationId": "getProviders",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Providers"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源、Host 或 CSRF 检查失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "存储或凭据失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "服务暂不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createProvider",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderCreateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Provider"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源、Host 或 CSRF 检查失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "供应商数量或参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "存储或凭据失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "服务暂不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/providers/{providerId}": {
+      "put": {
+        "operationId": "updateProvider",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProviderId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderUpdateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Provider"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源、Host 或 CSRF 检查失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "供应商不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "已有绑定后基址锁定",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "存储或凭据失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "服务暂不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteProvider",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProviderId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Providers"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源、Host 或 CSRF 检查失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "供应商不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "内置或已有绑定的供应商不能删除",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "存储或凭据失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "服务暂不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/credentials": {
+      "get": {
+        "operationId": "getCredentials",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderCredentials"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源、Host 或 CSRF 检查失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "存储或凭据失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "服务暂不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/credentials/{providerId}": {
+      "put": {
+        "operationId": "saveCredential",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProviderId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源、Host 或 CSRF 检查失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "供应商不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "该供应商不使用密钥",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "存储或凭据失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "服务暂不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteCredential",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProviderId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源、Host 或 CSRF 检查失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "供应商不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "该供应商不使用密钥",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "存储或凭据失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "服务暂不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions": {
+      "get": {
+        "operationId": "getSessions",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sessions"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源、Host 或 CSRF 检查失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "存储或凭据失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "服务暂不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/register": {
+      "post": {
+        "operationId": "registerSession",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Binding"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源、Host 或 CSRF 检查失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "会话未待登记、已绑定或供应商不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "存储或凭据失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "服务暂不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/diagnostics": {
+      "get": {
+        "operationId": "getDiagnostics",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Diagnostics"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源、Host 或 CSRF 检查失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "存储或凭据失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "服务暂不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/renew": {
+      "post": {
+        "operationId": "renewSession",
+        "description": "仅持有有效会话、同源Origin和CSRF的页面可续期；不足一小时延至八小时，失效会话拒绝。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源或CSRF错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "方法不支持",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/session": {
+      "get": {
+        "operationId": "getSession",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源、Host 或 CSRF 检查失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "存储或凭据失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "服务暂不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/exchange": {
+      "post": {
+        "operationId": "exchangeBootstrap",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "认证失效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "来源、Host 或 CSRF 检查失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "存储或凭据失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "服务暂不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/requests": {
+      "get": {
+        "operationId": "listRequests",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                20,
+                50,
+                100
+              ],
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 1024
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "processing",
+                "normal",
+                "error",
+                "success",
+                "unconfirmed"
+              ],
+              "default": "all"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000
+            },
+            "description": "页码模式，不得同时提供cursor"
+          },
+          {
+            "name": "snapshot",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 1024
+            },
+            "description": "只能与page配合，刷新时省略以获取新上界"
+          }
+        ]
+      }
+    },
+    "/api/v1/sessions/page": {
+      "get": {
+        "operationId": "listSessionPage",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                20,
+                50,
+                100
+              ],
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 1024
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "bound",
+                "pending"
+              ],
+              "default": "bound"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/history/policy": {
+      "get": {
+        "operationId": "getHistoryPolicy",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryPolicy"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "setHistoryPolicy",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryPolicy"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoryPolicy"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/history/clear": {
+      "post": {
+        "operationId": "clearRequestHistory",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClearHistoryResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "输入、认证或存储错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClearHistoryInput"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "SessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "codexrouter_session"
+      }
+    },
+    "parameters": {
+      "ProviderId": {
+        "name": "providerId",
+        "in": "path",
+        "required": true,
+        "description": "供应商标识，也是系统凭据名称。",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9_-]{1,64}$"
+        }
+      }
+    },
+    "schemas": {
+      "DailyStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "config_path",
+          "base_url",
+          "has_backup",
+          "message"
+        ],
+        "properties": {
+          "state": {
+            "type": "string"
+          },
+          "config_path": {
+            "type": "string"
+          },
+          "base_url": {
+            "type": "string"
+          },
+          "has_backup": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "DailyAction": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "route",
+              "restore"
+            ]
+          }
+        }
+      },
+      "DailyApply": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 128
+          }
+        }
+      },
+      "DailyPreview": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "token",
+          "action",
+          "config_path",
+          "before",
+          "after",
+          "expires_at",
+          "warning"
+        ],
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "config_path": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string"
+          },
+          "warning": {
+            "type": "string"
+          }
+        }
+      },
+      "RequestActivity": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "time",
+          "entry",
+          "thread_id",
+          "provider_id",
+          "phase",
+          "result",
+          "status",
+          "elapsed_ms",
+          "outcome",
+          "model",
+          "request_type",
+          "error_stage",
+          "metrics",
+          "observation"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "time": {
+            "type": "string"
+          },
+          "entry": {
+            "type": "string"
+          },
+          "thread_id": {
+            "type": "string"
+          },
+          "provider_id": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 599,
+            "description": "实际HTTP状态；0为尚无响应"
+          },
+          "elapsed_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "本机记录的请求耗时毫秒"
+          },
+          "outcome": {
+            "type": "string",
+            "description": "processing、success、error 或 unconfirmed；成功需协议完成证据"
+          },
+          "model": {
+            "type": "string",
+            "description": "响应实际报告的模型；缺失为空"
+          },
+          "request_type": {
+            "type": "string",
+            "description": "stream、sync、auxiliary 或 unknown"
+          },
+          "error_stage": {
+            "type": "string",
+            "description": "固定错误阶段：routing、upstream、stream、client、process 或 observation"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/RequestMetrics"
+          },
+          "observation": {
+            "$ref": "#/components/schemas/RequestObservation"
+          }
+        }
+      },
+      "Activity": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "received",
+          "items",
+          "degraded"
+        ],
+        "properties": {
+          "received": {
+            "type": "integer"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestActivity"
+            }
+          },
+          "degraded": {
+            "type": "boolean",
+            "description": "本轮历史记录或会话索引发生过持久化故障"
+          }
+        }
+      },
+      "ProviderSaveInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "provider_id",
+          "name",
+          "base_url",
+          "model",
+          "key"
+        ],
+        "properties": {
+          "provider_id": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "新建时空串，编辑时现有API密钥供应商ID"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "base_url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "model": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[\\x21-\\x7e]{0,128}$"
+          },
+          "key": {
+            "type": "string",
+            "maxLength": 2560,
+            "format": "password",
+            "writeOnly": true,
+            "description": "编辑留空保持原密钥；修改基址必须重新输入"
+          }
+        }
+      },
+      "ModelQueryInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "provider_id",
+          "base_url",
+          "key"
+        ],
+        "properties": {
+          "provider_id": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "base_url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "key": {
+            "type": "string",
+            "maxLength": 2560,
+            "format": "password",
+            "writeOnly": true
+          }
+        }
+      },
+      "ModelItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "Models": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModelItem"
+            }
+          }
+        }
+      },
+      "Client": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "target",
+          "installed",
+          "version",
+          "state",
+          "mode",
+          "profile",
+          "message"
+        ],
+        "properties": {
+          "target": {
+            "type": "string",
+            "enum": [
+              "cli",
+              "desktop"
+            ]
+          },
+          "installed": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "routed",
+              "direct"
+            ]
+          },
+          "profile": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Clients": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Client"
+            }
+          }
+        }
+      },
+      "ClientAction": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "target",
+          "action"
+        ],
+        "properties": {
+          "target": {
+            "type": "string",
+            "enum": [
+              "cli",
+              "desktop"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "start",
+              "login",
+              "check",
+              "stop",
+              "direct",
+              "routed"
+            ]
+          }
+        }
+      },
+      "ProviderKind": {
+        "type": "string",
+        "description": "供应商认证方式：official 转发客户端自身的官方身份，仅内置官方供应商可用；api_key 使用独立保存的密钥。",
+        "enum": [
+          "official",
+          "api_key"
+        ]
+      },
+      "Provider": {
+        "type": "object",
+        "description": "定义已保存的供应商、模型覆盖和当前可用状态。",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "base_url",
+          "model",
+          "key_configured",
+          "upstream_locked"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "供应商标识，同时作为系统凭据名称。",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "name": {
+            "type": "string",
+            "description": "页面显示名称。",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ProviderKind"
+          },
+          "base_url": {
+            "type": "string",
+            "description": "上游 HTTP(S) 基址；密钥供应商为空表示尚未配置。",
+            "maxLength": 2048
+          },
+          "model": {
+            "type": "string",
+            "description": "模型覆盖；空值表示透传客户端模型。",
+            "maxLength": 128
+          },
+          "key_configured": {
+            "type": "boolean",
+            "description": "该供应商是否已保存 API 密钥；官方转发供应商始终为 false。",
+            "readOnly": true
+          },
+          "upstream_locked": {
+            "type": "boolean",
+            "description": "已存在固定会话绑定，基址与认证方式不可修改。",
+            "readOnly": true
+          }
+        }
+      },
+      "Providers": {
+        "type": "object",
+        "description": "列出全部供应商。",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Provider"
+            }
+          }
+        }
+      },
+      "ProviderCreateKind": {
+        "type": "string",
+        "description": "新建供应商的认证方式；官方身份仅保留给内置官方供应商，新增只能是 api_key。",
+        "enum": [
+          "api_key"
+        ]
+      },
+      "ProviderCreateInput": {
+        "type": "object",
+        "description": "新建供应商；标识由后端生成，避免复用旧凭据命名空间。",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "kind",
+          "base_url",
+          "model"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "页面显示名称。",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ProviderCreateKind"
+          },
+          "base_url": {
+            "type": "string",
+            "description": "上游 HTTP(S) 基址；密钥供应商可以稍后填写。",
+            "maxLength": 2048
+          },
+          "model": {
+            "type": "string",
+            "description": "模型覆盖；空值表示透传客户端模型。",
+            "maxLength": 128
+          }
+        }
+      },
+      "ProviderUpdateInput": {
+        "type": "object",
+        "description": "更新供应商；标识与认证方式不可修改，有绑定后基址锁定。",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "base_url",
+          "model"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "页面显示名称。",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "base_url": {
+            "type": "string",
+            "description": "上游 HTTP(S) 基址；密钥供应商可以留空。",
+            "maxLength": 2048
+          },
+          "model": {
+            "type": "string",
+            "description": "模型覆盖；空值表示透传客户端模型。",
+            "maxLength": 128
+          }
+        }
+      },
+      "Config": {
+        "type": "object",
+        "description": "定义非敏感路由配置；供应商单独管理。",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "default_provider_id",
+          "connect_timeout_ms",
+          "header_timeout_ms",
+          "idle_timeout_ms",
+          "write_timeout_ms",
+          "max_concurrent"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "description": "配置版本。",
+            "enum": [
+              2
+            ]
+          },
+          "default_provider_id": {
+            "type": "string",
+            "description": "新会话默认供应商标识。",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "connect_timeout_ms": {
+            "type": "integer",
+            "description": "建立连接超时，单位毫秒。",
+            "minimum": 100,
+            "maximum": 300000
+          },
+          "header_timeout_ms": {
+            "type": "integer",
+            "description": "响应头超时，单位毫秒。",
+            "minimum": 100,
+            "maximum": 300000
+          },
+          "idle_timeout_ms": {
+            "type": "integer",
+            "description": "流读取空闲超时，单位毫秒。",
+            "minimum": 100,
+            "maximum": 3600000
+          },
+          "write_timeout_ms": {
+            "type": "integer",
+            "description": "客户端写停滞超时，单位毫秒。",
+            "minimum": 100,
+            "maximum": 300000
+          },
+          "max_concurrent": {
+            "type": "integer",
+            "description": "最大并发请求数。",
+            "minimum": 1,
+            "maximum": 128
+          }
+        }
+      },
+      "ConfigInput": {
+        "type": "object",
+        "description": "保存默认供应商与超时；供应商本身通过供应商接口维护。",
+        "additionalProperties": false,
+        "required": [
+          "default_provider_id",
+          "connect_timeout_ms",
+          "header_timeout_ms",
+          "idle_timeout_ms",
+          "write_timeout_ms",
+          "max_concurrent"
+        ],
+        "properties": {
+          "default_provider_id": {
+            "type": "string",
+            "description": "新会话默认供应商标识。",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "connect_timeout_ms": {
+            "type": "integer",
+            "description": "建立连接超时，单位毫秒。",
+            "minimum": 100,
+            "maximum": 300000
+          },
+          "header_timeout_ms": {
+            "type": "integer",
+            "description": "响应头超时，单位毫秒。",
+            "minimum": 100,
+            "maximum": 300000
+          },
+          "idle_timeout_ms": {
+            "type": "integer",
+            "description": "流读取空闲超时，单位毫秒。",
+            "minimum": 100,
+            "maximum": 3600000
+          },
+          "write_timeout_ms": {
+            "type": "integer",
+            "description": "客户端写停滞超时，单位毫秒。",
+            "minimum": 100,
+            "maximum": 300000
+          },
+          "max_concurrent": {
+            "type": "integer",
+            "description": "最大并发请求数。",
+            "minimum": 1,
+            "maximum": 128
+          }
+        }
+      },
+      "Capabilities": {
+        "type": "object",
+        "description": "说明管理 API 兼容版本和当前协议边界。",
+        "additionalProperties": false,
+        "required": [
+          "api_version",
+          "protocol_status",
+          "transports"
+        ],
+        "properties": {
+          "api_version": {
+            "type": "string",
+            "description": "管理接口版本。"
+          },
+          "protocol_status": {
+            "type": "string",
+            "description": "实际兼容验收状态。"
+          },
+          "transports": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "支持的传输方式。"
+            }
+          }
+        }
+      },
+      "ProviderStatus": {
+        "type": "object",
+        "description": "表示某个供应商最近一次请求结果，不能代表当前可达性。",
+        "additionalProperties": false,
+        "required": [
+          "provider_id",
+          "result",
+          "checked_at",
+          "code"
+        ],
+        "properties": {
+          "provider_id": {
+            "type": "string",
+            "description": "供应商标识。",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "result": {
+            "type": "string",
+            "description": "最近结果。",
+            "enum": [
+              "unverified",
+              "success",
+              "failure"
+            ]
+          },
+          "checked_at": {
+            "type": "string",
+            "description": "最近结果时间；未验证时为空。"
+          },
+          "code": {
+            "type": "string",
+            "description": "脱敏结果码。"
+          }
+        }
+      },
+      "Status": {
+        "type": "object",
+        "description": "表示本地状态及每个供应商的最近结果。",
+        "additionalProperties": false,
+        "required": [
+          "local",
+          "active_requests",
+          "upstreams"
+        ],
+        "properties": {
+          "local": {
+            "type": "string",
+            "description": "本地运行状态。"
+          },
+          "active_requests": {
+            "type": "integer",
+            "description": "活动请求数。",
+            "minimum": 0
+          },
+          "upstreams": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderStatus"
+            }
+          }
+        }
+      },
+      "CredentialInput": {
+        "type": "object",
+        "description": "设置某个密钥供应商的 API 密钥，仅用于写入。",
+        "additionalProperties": false,
+        "required": [
+          "key"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "供应商 API 密钥，最多 2560 个 UTF-8 字节；不回传、不记录。",
+            "minLength": 1,
+            "maxLength": 2560,
+            "writeOnly": true,
+            "format": "password"
+          }
+        }
+      },
+      "CredentialStatus": {
+        "type": "object",
+        "description": "只返回指定供应商的密钥是否已配置。",
+        "additionalProperties": false,
+        "required": [
+          "provider_id",
+          "configured"
+        ],
+        "properties": {
+          "provider_id": {
+            "type": "string",
+            "description": "供应商标识。",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "configured": {
+            "type": "boolean",
+            "description": "该供应商的 API 密钥是否存在。"
+          }
+        }
+      },
+      "ProviderCredentials": {
+        "type": "object",
+        "description": "列出密钥供应商的配置状态，不含密钥内容。",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CredentialStatus"
+            }
+          }
+        }
+      },
+      "Binding": {
+        "type": "object",
+        "description": "定义持久化的固定会话绑定。",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "provider_id",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "会话标识。",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "provider_id": {
+            "type": "string",
+            "description": "固定的供应商标识。",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "created_at": {
+            "type": "string",
+            "description": "首次绑定的时间。"
+          }
+        }
+      },
+      "PendingSession": {
+        "type": "object",
+        "description": "定义尚未确认来源的会话。",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "first_seen",
+          "reason"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "会话标识。",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "first_seen": {
+            "type": "string",
+            "description": "首次出现的时间。"
+          },
+          "reason": {
+            "type": "string",
+            "description": "等待登记的原因。"
+          }
+        }
+      },
+      "Sessions": {
+        "type": "object",
+        "description": "列出已绑定与待登记会话。",
+        "additionalProperties": false,
+        "required": [
+          "bindings",
+          "pending"
+        ],
+        "properties": {
+          "bindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Binding"
+            }
+          },
+          "pending": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PendingSession"
+            }
+          }
+        }
+      },
+      "RegisterInput": {
+        "type": "object",
+        "description": "只允许首次确认供应商，不允许改线。",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "provider_id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "待登记会话标识。",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "provider_id": {
+            "type": "string",
+            "description": "首次使用的供应商标识。",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        }
+      },
+      "Diagnostic": {
+        "type": "object",
+        "description": "定义无正文及凭据的近期诊断。",
+        "additionalProperties": false,
+        "required": [
+          "time",
+          "code",
+          "provider_id"
+        ],
+        "properties": {
+          "time": {
+            "type": "string",
+            "description": "诊断发生时间。"
+          },
+          "code": {
+            "type": "string",
+            "description": "脱敏诊断码。"
+          },
+          "provider_id": {
+            "type": "string",
+            "description": "供应商标识。",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        }
+      },
+      "Diagnostics": {
+        "type": "object",
+        "description": "返回有界诊断集合。",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Diagnostic"
+            }
+          }
+        }
+      },
+      "ErrorDetail": {
+        "type": "object",
+        "description": "定义稳定错误码与可读说明。",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "稳定错误码。"
+          },
+          "message": {
+            "type": "string",
+            "description": "可读错误说明；不包含密钥和正文。"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "统一管理接口错误格式。",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorDetail"
+          }
+        }
+      },
+      "AuthInput": {
+        "type": "object",
+        "description": "交换一次性引导令牌。",
+        "additionalProperties": false,
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "一次性令牌，不进入查询参数和日志。",
+            "writeOnly": true,
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      },
+      "AuthSession": {
+        "type": "object",
+        "description": "返回当前会话的 CSRF 令牌，仅保存在页面内存。",
+        "additionalProperties": false,
+        "required": [
+          "csrf_token"
+        ],
+        "properties": {
+          "csrf_token": {
+            "type": "string",
+            "description": "CSRF 令牌。"
+          }
+        }
+      },
+      "RequestPage": {
+        "type": "object",
+        "description": "脱敏请求历史的数据库游标分页；HTTP正常不等于语义完成",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "next_cursor",
+          "total",
+          "degraded",
+          "page",
+          "total_pages",
+          "snapshot"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestActivity"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "degraded": {
+            "type": "boolean"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "页码模式实际页码，游标模式为0"
+          },
+          "total_pages": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "snapshot": {
+            "type": "string",
+            "description": "绑定筛选与页大小的查询上界标识，不是状态MVCC快照"
+          }
+        }
+      },
+      "SessionPage": {
+        "type": "object",
+        "description": "独立的会话查询页，不等同于请求列表",
+        "additionalProperties": false,
+        "required": [
+          "bindings",
+          "pending",
+          "next_cursor",
+          "total",
+          "kind"
+        ],
+        "properties": {
+          "bindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Binding"
+            }
+          },
+          "pending": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PendingSession"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "bound",
+              "pending"
+            ]
+          }
+        }
+      },
+      "HistoryPolicy": {
+        "type": "object",
+        "description": "只影响已结束请求的滚动天数；0为不限期",
+        "additionalProperties": false,
+        "required": [
+          "days"
+        ],
+        "properties": {
+          "days": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3650
+          }
+        }
+      },
+      "ClearHistoryInput": {
+        "type": "object",
+        "description": "用户明确确认清除已结束请求；不影响绑定及待登记",
+        "additionalProperties": false,
+        "required": [
+          "confirm"
+        ],
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ClearHistoryResult": {
+        "type": "object",
+        "description": "本次删除的已结束请求数量",
+        "additionalProperties": false,
+        "required": [
+          "deleted"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "RequestMetrics": {
+        "type": "object",
+        "description": "只保存用量与时间元数据，不保存原始事件；缓存及推理子集不得重复计入总量。",
+        "additionalProperties": false,
+        "required": [
+          "input_tokens",
+          "output_tokens",
+          "total_tokens",
+          "cache_read_tokens",
+          "cache_write_tokens",
+          "reasoning_tokens",
+          "first_token_ms",
+          "protocol_completed_ms",
+          "known_fields"
+        ],
+        "properties": {
+          "input_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "上游报告的输入 token，包含缓存子集"
+          },
+          "output_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "上游报告的输出 token，包含其推理子集"
+          },
+          "total_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "上游报告或由完整输入输出相加的总量"
+          },
+          "cache_read_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "缓存命中 token"
+          },
+          "cache_write_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "缓存写入 token"
+          },
+          "reasoning_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "推理 token，为输出子集"
+          },
+          "first_token_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "首个有效输出事件相对入口时间的毫秒数"
+          },
+          "known_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "实际可用的指标字段名；未列出不代表0"
+          },
+          "protocol_completed_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "明确终止事件到达相对入口的耗时；elapsed_ms仍保存完整连接结束耗时"
+          }
+        }
+      },
+      "RequestObservation": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "保存协议终止与传输结束的独立脱敏事实；旧记录不反推结果或用量。",
+        "required": [
+          "terminal_result",
+          "transport_result",
+          "metrics_status"
+        ],
+        "properties": {
+          "terminal_result": {
+            "type": "string",
+            "description": "协议终止结果；unknown表示没有可靠终止证据。"
+          },
+          "transport_result": {
+            "type": "string",
+            "description": "连接结束原因，如EOF、REQUEST_CANCELED或CLIENT_WRITE_FAILED。"
+          },
+          "metrics_status": {
+            "type": "string",
+            "description": "available、partial、not_reported、unavailable、not_applicable、legacy或pending；known_fields仍逐字段决定可用性。"
+          }
+        }
+      }
+    }
+  }
+}

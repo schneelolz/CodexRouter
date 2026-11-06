@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: pwsh
+
+env:
+  GOTOOLCHAIN: local
+
+jobs:
+  backend:
+    name: Windows Go tests and race
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+      - name: Verify Go modules
+        run: go mod verify
+      - name: Go vet
+        run: go vet ./cmd/... ./internal/...
+      - name: Go tests
+        run: go test ./cmd/... ./internal/... -count=1 -timeout 180s
+      - name: Go race tests
+        run: |
+          $compilers = @('C:/mingw64/bin/gcc.exe', 'C:/msys64/mingw64/bin/gcc.exe', 'C:/msys64/ucrt64/bin/gcc.exe')
+          $compiler = $compilers | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+          if (-not $compiler) { throw 'Windows runner lacks a MinGW compiler required for Go race.' }
+          $env:PATH = (Split-Path $compiler -Parent) + [IO.Path]::PathSeparator + $env:PATH
+          $env:CC = $compiler
+          $env:CGO_ENABLED = '1'
+          go test -race ./cmd/... ./internal/... -count=1 -timeout 180s
+      - name: Build standalone Windows binary
+        env:
+          CGO_ENABLED: '0'
+        run: go build -trimpath -o artifacts/codexrouter.exe ./cmd/codexrouter
+      - name: Standalone startup smoke tests
+        run: ./scripts/release-smoke.ps1 -Executable artifacts/codexrouter.exe
+      - name: Upload smoke results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-smoke-results
+          path: artifacts/verification/release-smoke-*/results.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  frontend:
+    name: UI contract, tests and browser integration
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install locked frontend dependencies
+        run: npm --prefix frontend ci
+      - name: Check contract and generated types
+        run: node scripts/contract-check.mjs
+      - name: TypeScript checks
+        run: npm --prefix frontend run typecheck
+      - name: Frontend unit tests
+        run: npm --prefix frontend run test
+      - name: Build production UI
+        run: npm --prefix frontend run build
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx playwright install chromium
+      - name: Browser regression tests
+        run: npm --prefix frontend run test:e2e
+      - name: Compile Go integration fixture before timed startup
+        run: go test ./internal/router -run '^$' -count=1 -timeout 180s
+      - name: Production UI and real Go API integration
+        run: npm --prefix frontend run test:integration
+      - name: Upload synthetic browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: synthetic-browser-results
+          path: |
+            frontend/test-results/
+            frontend/test-results-integration/
+          if-no-files-found: ignore
+          retention-days: 7

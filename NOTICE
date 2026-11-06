@@ -1,0 +1,10 @@
+CodexRouter
+Copyright (c) 2026 schneelolz
+
+SPDX-License-Identifier: AGPL-3.0-only
+
+CodexRouter is licensed under the GNU Affero General Public License,
+version 3 only. See LICENSE for the full license text.
+
+Third-party components retain their respective copyright notices and
+licenses. Dependency license notices are preserved in docs/*LICENSE.txt.

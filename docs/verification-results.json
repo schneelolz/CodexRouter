@@ -1,0 +1,73 @@
+{
+  "date": "2026-11-06",
+  "functional_baseline": "0.5.0-test-usage1",
+  "management_api": "1.6.0",
+  "sqlite_schema": 2,
+  "checks": [
+    {
+      "check": "管理契约及生成一致性",
+      "exit_code": 0,
+      "seconds": 0.22
+    },
+    {
+      "check": "go vet",
+      "exit_code": 0,
+      "seconds": 1.33
+    },
+    {
+      "check": "go test",
+      "exit_code": 0,
+      "seconds": 35.94
+    },
+    {
+      "check": "go test -race",
+      "exit_code": 0,
+      "seconds": 47.83
+    },
+    {
+      "check": "npm ci",
+      "exit_code": 0,
+      "seconds": 7.8
+    },
+    {
+      "check": "前端类型检查",
+      "exit_code": 0,
+      "seconds": 3.68
+    },
+    {
+      "check": "前端单元测试",
+      "exit_code": 0,
+      "seconds": 2.37
+    },
+    {
+      "check": "前端生产构建",
+      "exit_code": 0,
+      "seconds": 2.16
+    },
+    {
+      "check": "前端浏览器测试",
+      "exit_code": 0,
+      "seconds": 76.12
+    },
+    {
+      "check": "真实 Go API 与生产页面联调",
+      "exit_code": 0,
+      "seconds": 10.53
+    }
+  ],
+  "unit_tests_passed": 13,
+  "browser_tests_passed": 15,
+  "go_api_browser_integration_tests_passed": 1,
+  "startup_smoke_passed": 5,
+  "drain_smoke_passed": 2,
+  "production_instance_changed": false,
+  "real_upstream_verified": false,
+  "authenticated_desktop_verified": false,
+  "subagent_compatibility_verified": false,
+  "privacy_review": {
+    "old_history_included": false,
+    "original_protocol_records_included": false,
+    "reviewed_synthetic_path_fixture": true,
+    "raw_test_evidence_included": false
+  }
+}

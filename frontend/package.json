@@ -1,0 +1,30 @@
+{
+  "name": "codexrouter-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 18789 --strictPort",
+    "dev:mock": "vite --mode mock --host 127.0.0.1 --port 18789 --strictPort",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run src",
+    "build": "vite build",
+    "test:e2e": "playwright test",
+    "test:integration": "playwright test --config playwright.integration.config.ts",
+    "contract:check": "node ../scripts/generate-contract.mjs --check"
+  },
+  "dependencies": {
+    "@lucide/vue": "1.69.0",
+    "naive-ui": "2.45.3",
+    "vue": "3.5.44"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "24.19.2",
+    "@vitejs/plugin-vue": "6.0.10",
+    "typescript": "5.9.3",
+    "vite": "8.3.5",
+    "vitest": "5.1.0",
+    "vue-tsc": "3.3.14"
+  }
+}
