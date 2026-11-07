@@ -1,3 +1,16 @@
+# macOS 开发接手与跨平台整合
+
+macOS 实现基于公开基线 `a531544`，已与 Windows `27d73f5` 的持久诊断及管理认证恢复整合，与 Windows 共用 Go 路由核心、Vue 管理页、API 1.8 和 SQLite schema 3。通过独立开发提交及普通合并保留两端历史；发布只包含源码、通用文档和脱敏验证摘要。本机安装记录及原始证据不进入公开历史。
+
+- Darwin 使用 CGO / Security.framework / AppKit；其他平台由 build tag 隔离，保留 Windows 凭据与托盘实现。
+- Keychain 按数据目录规范路径隔离；普通访问禁止交互，显式本地授权命令才请求系统窗口。凭据空间迁移需要确认并保留原条目，不自动切换线路。
+- 菜单栏运行在主线程，`.app` 包含独立 UI、图标与完整 ad-hoc 签名；SIGINT/SIGTERM 走有界流式排空。未提供自启动服务或 Developer ID 公证。
+- macOS CLI 管理入口仅做隔离探测；桌面多实例隔离未证明，继续禁用独立桌面启动。CLI 合成协议不代表真实桌面验收。
+- 已复现的临时 warm-fork 允许显式父 Session-Id 与子元数据组合，子线程独立绑定；未知父及其他冲突仍拒绝。
+- Unix 存储检查私有权限、目录归属及符号链接；日常接入保留非连接字段及恢复依据，不自动改真实配置。
+
+构建、迁移与验收入口见 [macOS 说明](macos.md)，测试边界见 [验证记录](verification.md)。源码同步不部署现有应用、不操作用户凭据或正在运行的客户端。本次完整本机验证已通过；平台 CI 以对应 PR/Actions 为准，不继承历史结果。
+
 # 开发说明
 
 ## 目录与职责
@@ -21,7 +34,7 @@ Go 不嵌入前端。生产静态文件由显式 `ui/` 目录托管，可独立�
 
 ## 工具与构建
 
-Go 版本见 `go.mod`，前端依赖见锁文件。开发验证使用 Node.js 24、PowerShell 7、Windows；生产后端构建禁用 CGO。构建脚本优先 `%LOCALAPPDATA%\CodexRouter\toolchains\go\bin\go.exe`，不存在则使用 PATH 中的 Go。
+Go 版本见 `go.mod`，前端依赖见锁文件。开发验证使用 Node.js 24、PowerShell 7、Windows；Windows 生产后端构建禁用 CGO；macOS 原生构建必须启用 CGO。构建脚本优先 `%LOCALAPPDATA%\CodexRouter\toolchains\go\bin\go.exe`，不存在则使用 PATH 中的 Go。
 
 ```powershell
 .\scripts\build.ps1 -BackendOnly -OutputDir artifacts\backend -Version 0.8.0-test-compact-ui1
@@ -53,3 +66,5 @@ JSON 绑定是路由权威，SQLite 会话索引可从其修复；待登记与�
 `.github/workflows/ci.yml`使用Windows runner、go.mod指定Go版本和Node.js24，分别执行Go普通/race及启动验收、前端契约/类型/单测/构建/浏览器/Go联调。Actions固定到提交SHA，只读仓库权限；浏览器证据仅来自合成夹具，保留7天。CI不启动真实Codex或使用真实账号。
 
 页面层级、滚动和协议结果/传输收尾区分见[页面与指标](ui-layout.md)。接口1.8和schema3升级边界见[契约](../contracts/README.md)。
+
+macOS CI 在 Apple Silicon 与 Intel runner 上运行 `scripts/verify-macos.sh --install-browser`；外置 CLI 与内置 app-server 合成协议需本机显式启用，不要求 CI 安装真实 Codex。

@@ -88,7 +88,7 @@ func New(home, base, owner string) (*Manager, error) {
 	if strings.HasPrefix(home, `\\`) {
 		return nil, failure("DAILY_UNSUPPORTED")
 	}
-	return &Manager{home: home, config: filepath.Join(home, "config.toml"), dir: filepath.Join(home, ".codexrouter-routing"), base: base, owner: sum([]byte(strings.ToLower(owner)))}, nil
+	return &Manager{home: home, config: filepath.Join(home, "config.toml"), dir: filepath.Join(home, ".codexrouter-routing"), base: base, owner: sum([]byte(ownerIdentity(owner)))}, nil
 }
 
 // Discover 使用现有CODEX_HOME；有地址覆盖时拒绝误报接入成功。

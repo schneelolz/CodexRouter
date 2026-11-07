@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -94,6 +95,10 @@ func New(o Options) (*Server, error) {
 		err = o.Credentials.Set("control", randomToken())
 	}
 	if err != nil {
+		var status *platform.CredentialError
+		if errors.As(err, &status) {
+			return nil, fmt.Errorf("本地控制凭据不可用: %w", status)
+		}
 		return nil, errors.New("本地控制凭据不可用")
 	}
 	s := &Server{log: o.Log, state: st, creds: o.Credentials, authority: o.Authority, origins: map[string]bool{"http://" + o.Authority: true}, clients: make(map[string]*http.Client), diagnostics: []api.Diagnostic{}, upstreams: make(map[string]api.ProviderStatus)}
@@ -383,7 +388,11 @@ func (s *Server) manage(w http.ResponseWriter, r *http.Request) {
 				status := 409
 				switch code {
 				case "CLIENT_START_FAILED":
-					message = "测试窗口创建失败，请检查客户端安装及 Windows 控制台权限；未修改日常配置"
+					message = "测试客户端创建失败，请检查客户端安装及本机进程/窗口权限；未修改日常配置"
+				case "CLIENT_DESKTOP_ISOLATION_UNVERIFIED":
+					message = "macOS 桌面多实例隔离尚未验证，已禁止启动；不会复用或停止现有桌面"
+				case "CLIENT_MACOS_PROBE_ONLY":
+					message = "macOS 当前仅支持隔离启动和登录状态检查，不提供交互登录或代理启动"
 				case "CLIENT_RUNNING":
 					message = "请先关闭或停止该专用客户端，再切换模式或重新启动"
 				case "PROFILE_CONFLICT":

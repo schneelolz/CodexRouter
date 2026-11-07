@@ -1,8 +1,12 @@
 package router
 
 import (
+	"io"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -45,6 +49,64 @@ func TestRenewSessionWindowSecurityAndConcurrentTabs(t *testing.T) {
 	w = securityRequest(s, options)
 	if w.Code != 401 || len(w.Result().Cookies()) != 0 {
 		t.Fatal("失效凭据被续期")
+	}
+}
+
+func TestExpiredManagementSessionDoesNotBlockInference(t *testing.T) {
+	for _, provider := range []string{BuiltinOfficialID, BuiltinCompanyID} {
+		t.Run(provider, func(t *testing.T) {
+			var calls atomic.Int64
+			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls.Add(1)
+				expected := "Bearer synthetic-client-token"
+				if provider == BuiltinCompanyID {
+					expected = "Bearer synthetic-provider-key"
+				}
+				if r.Header.Get("Authorization") != expected {
+					t.Error("upstream credential mismatch")
+				}
+				if r.Header.Get("Cookie") != "" {
+					t.Error("management cookie leaked upstream")
+				}
+				w.Header().Set("Content-Type", "text/event-stream")
+				_, _ = io.WriteString(w, "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"output\":[{\"type\":\"message\"}],\"usage\":{\"input_tokens\":2,\"output_tokens\":1}}}\n\n")
+			}))
+			defer upstream.Close()
+			s, host := liveRouter(t, upstream.URL)
+			if provider == BuiltinCompanyID {
+				if err := s.creds.Set(provider, "synthetic-provider-key"); err != nil {
+					t.Fatal(err)
+				}
+			}
+			config := s.state.config()
+			config.DefaultProviderID = provider
+			if err := s.state.saveConfig(config); err != nil {
+				t.Fatal(err)
+			}
+			cookie, _ := securityLogin(t, s)
+			s.mu.Lock()
+			s.sessionExpiry = time.Now().Add(-time.Hour)
+			s.mu.Unlock()
+			if w := securityRequest(s, securityRequestOptions{path: "/api/v1/status", cookie: cookie}); w.Code != http.StatusUnauthorized {
+				t.Fatal("expired management cookie accepted")
+			}
+			request := inferenceRequest(t, host.URL, "synthetic-expired-management-"+provider, "new")
+			request.Header.Set("Authorization", "Bearer synthetic-client-token")
+			request.AddCookie(cookie)
+			response, err := host.Client().Do(request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			body, err := io.ReadAll(response.Body)
+			response.Body.Close()
+			if err != nil || response.StatusCode != http.StatusOK || !strings.Contains(string(body), "response.completed") || calls.Load() != 1 {
+				t.Fatal("management expiry blocked or replayed generation", err)
+			}
+			item := waitFinishedRequest(t, s)
+			if item.Outcome != "success" {
+				t.Fatal("forwarded generation not recorded as success", item.Result)
+			}
+		})
 	}
 }
 

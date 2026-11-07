@@ -53,6 +53,9 @@ func Open(dir string) (*Store, error) {
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return nil, errors.New("数据目录必须是普通目录，不能是符号链接")
 	}
+	if err := validateDataDirectory(info); err != nil {
+		return nil, err
+	}
 	lock, err := acquireLock(filepath.Join(abs, ".instance.lock"))
 	if err != nil {
 		return nil, err

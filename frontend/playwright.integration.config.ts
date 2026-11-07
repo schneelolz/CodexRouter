@@ -6,7 +6,9 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const localGo = path.join(process.env.LOCALAPPDATA ?? '', 'CodexRouter/toolchains/go/bin/go.exe')
+const localGo = process.platform === 'win32'
+  ? path.join(process.env.LOCALAPPDATA ?? '', 'CodexRouter/toolchains/go/bin/go.exe')
+  : path.join(root, 'artifacts/toolchains/go/bin/go')
 const go = process.env.GO_EXE ?? (existsSync(localGo) ? localGo : 'go')
 process.env.CODEXROUTER_E2E_TOKEN ??= randomBytes(32).toString('hex')
 const port = process.env.CODEXROUTER_E2E_PORT ?? '19962'

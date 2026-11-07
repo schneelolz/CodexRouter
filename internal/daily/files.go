@@ -9,14 +9,14 @@ import (
 func safePath(path string, directory bool) error {
 	for p := path; ; p = filepath.Dir(p) {
 		f, err := os.Lstat(p)
-		if err != nil || f.Mode()&os.ModeSymlink != 0 || isReparse(f) {
+		if err != nil || (f.Mode()&os.ModeSymlink != 0 && !systemPathAlias(p)) || isReparse(f) {
 			return failure("DAILY_UNSUPPORTED")
 		}
 		if p == path {
 			if directory && !f.IsDir() || !directory && !f.Mode().IsRegular() {
 				return failure("DAILY_UNSUPPORTED")
 			}
-		} else if !f.IsDir() {
+		} else if !f.IsDir() && !systemPathAlias(p) {
 			return failure("DAILY_UNSUPPORTED")
 		}
 		if filepath.Dir(p) == p {

@@ -6,7 +6,7 @@
 
 **为 Codex 管理多家供应商，让每个会话保持自己的线路。**
 
-Windows 本机路由 · 会话固定绑定 · 请求用量与延迟 · 托盘管理
+Windows / macOS 本机路由 · 会话固定绑定 · 请求用量与延迟 · 托盘管理
 
 [中文](README.md) · [English](README.en.md)
 
@@ -18,7 +18,7 @@ Windows 本机路由 · 会话固定绑定 · 请求用量与延迟 · 托盘管
 
 ## 项目简介
 
-CodexRouter 是运行在 Windows 本机的 Codex 请求路由器，使用 Go 后端和独立的 Vue 3 / TypeScript 管理页面。你可以集中配置官方线路和多家 API Key 供应商，为新会话选择默认线路，并查看请求结果、Token、缓存、首字时间和输出速率。
+CodexRouter 是运行在 Windows / macOS 本机的 Codex 请求路由器，使用 Go 后端和独立的 Vue 3 / TypeScript 管理页面。你可以集中配置官方线路和多家 API Key 供应商，为新会话选择默认线路，并查看请求结果、Token、缓存、首字时间和输出速率。
 
 它以会话为单位固定供应商：**切换默认线路，只影响后续新会话。** 已有会话继续使用原供应商；来源无法确认的历史会话，会先等待你登记原供应商，再由客户端重试。
 
@@ -48,7 +48,16 @@ flowchart LR
 
 ## 快速开始
 
-### 1. 构建程序
+### macOS 开发候选
+
+```bash
+bash scripts/build-macos.sh --out artifacts/macos-local --version 0.8.0-macos-dev
+./artifacts/macos-local/codexrouter launch --data-dir "$PWD/runtime/macos-trial" --port 19973
+```
+
+需要 Go 1.27.3、Node.js、Apple Command Line Tools 和 CGO。提供原生 Keychain、菜单栏和 `.app`；Apple Silicon 已做隔离验证，Intel 仅交叉构建。桌面独立启动未证明隔离，保持禁用；真实账号与日常接入须另行验收。不会自动修改 Codex 配置。构建、退出、恢复及逐项验收见 [macOS 说明](docs/macos.md)。
+
+### 1. 构建程序（Windows）
 
 构建需要 **Windows x64、PowerShell 7、Go 1.27.3、Node.js 24**。目前尚未发布 GitHub Release，可从源码构建：
 
@@ -96,7 +105,7 @@ cd CodexRouter
 
 ## 数据与更新
 
-- 供应商密钥和管理控制凭据保存在 Windows Credential Manager；配置与会话绑定在 `state.json`，请求历史在 `history.sqlite`。
+- 供应商密钥和管理控制凭据保存在 Windows Credential Manager 或 macOS Keychain；配置与会话绑定在 `state.json`，请求历史在 `history.sqlite`。
 - 请求历史保存模型、会话标识、用量和时间等元数据，不保存聊天正文或认证。API Key、管理入口令牌、Cookie 和运行数据均应保持私密。
 - 日常接入只修改原配置的连接字段；恢复依据在原目录的 `.codexrouter-routing`。退出路由器不会自动恢复直连，需要在管理页确认恢复并重开客户端。
 - 更新前正常停止目标实例，整体备份数据目录。不要单独复制或删除运行中的 SQLite 附属文件；回退旧版程序时须使用配套的升级前数据副本。复制目录不会迁移系统凭据。

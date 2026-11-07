@@ -6,7 +6,7 @@
 
 **Manage multiple Codex providers while keeping every session on its own route.**
 
-Local Windows router · Session bindings · Usage and latency · System tray
+Local Windows / macOS router · Session bindings · Usage and latency · System tray
 
 [中文](README.md) · [English](README.en.md)
 
@@ -18,7 +18,7 @@ Local Windows router · Session bindings · Usage and latency · System tray
 
 ## Overview
 
-CodexRouter runs locally on Windows, with a Go backend and a separate Vue 3 / TypeScript management UI. Configure the official route and multiple API key providers in one place, choose a default for new sessions, and inspect request results, tokens, cache usage, time to first token, and output rate.
+CodexRouter runs locally on Windows and macOS, with a Go backend and a separate Vue 3 / TypeScript management UI. Configure the official route and multiple API key providers in one place, choose a default for new sessions, and inspect request results, tokens, cache usage, time to first token, and output rate.
 
 Routing is bound to each session: **changing the default only affects new sessions.** Existing sessions keep their original provider. Historical sessions with an unknown origin wait for you to register their original provider before retrying from the client.
 
@@ -48,7 +48,16 @@ The UI has grouped request and session menus, compact tables, and scrolling limi
 
 ## Quick start
 
-### 1. Build
+### macOS development candidate
+
+```bash
+bash scripts/build-macos.sh --out artifacts/macos-local --version 0.8.0-macos-dev
+./artifacts/macos-local/codexrouter launch --data-dir "$PWD/runtime/macos-trial" --port 19973
+```
+
+Requires the Go version in `go.mod`, Node.js, Apple Command Line Tools, and CGO. Includes native Keychain storage, a menu bar app, and a signed local `.app` bundle. Desktop isolation remains unverified and independent desktop launch stays disabled. Real-account and desktop acceptance are separate from synthetic CLI tests. See [macOS build, update, and recovery](docs/macos.md).
+
+### 1. Build on Windows
 
 Building requires **Windows x64, PowerShell 7, Go 1.27.3, and Node.js 24**. No GitHub Release has been published yet; build from source:
 
@@ -96,7 +105,7 @@ The router forwards HTTP/SSE. It does not implement WebSocket forwarding, automa
 
 ## Data and updates
 
-- Provider keys and management control credentials use Windows Credential Manager. Configuration and session bindings live in `state.json`; request history lives in `history.sqlite`.
+- Provider keys and management control credentials use Windows Credential Manager or macOS Keychain. Configuration and session bindings live in `state.json`; request history lives in `history.sqlite`.
 - History stores metadata such as model, session ID, usage, and timing, without chat bodies or authentication. Keep API keys, management bootstrap links, cookies, and runtime data private.
 - Daily integration changes only the original connection field. Restore records live in the original directory's `.codexrouter-routing` folder. Exiting the router does not restore direct access automatically; confirm restoration in the UI and restart the client.
 - Before updating, stop the target instance normally and back up its entire data directory. Do not copy or delete individual SQLite sidecar files while it is running. Rolling back requires the matching pre-upgrade data backup; copying a directory does not migrate system credentials.

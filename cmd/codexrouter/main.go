@@ -13,7 +13,9 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"codexrouter/internal/clients"
@@ -27,6 +29,13 @@ import (
 )
 
 var version = "0.4.0-test-history1"
+
+func init() {
+	// AppKit must run on the process main thread; other platforms keep their lifecycle.
+	if runtime.GOOS == "darwin" {
+		runtime.LockOSThread()
+	}
+}
 
 func main() {
 	if err := run(); err != nil {
@@ -57,7 +66,7 @@ func parseOptions(args []string, exe string) (launchOptions, error) {
 	}
 	defaults := ""
 	if out.gui {
-		defaults = filepath.Join(filepath.Dir(exe), "ui")
+		defaults = defaultUIDir(exe)
 	}
 	flags := flag.NewFlagSet("CodexRouter", flag.ContinueOnError)
 	flags.BoolVar(&out.apiOnly, "api-only", false, "仅提供API")
@@ -96,7 +105,13 @@ func parseOptions(args []string, exe string) (launchOptions, error) {
 	out.data = abs
 	return out, nil
 }
+
+var platformCommand = func([]string) (bool, error) { return false, nil }
+
 func run() (runErr error) {
+	if handled, err := platformCommand(os.Args[1:]); handled {
+		return err
+	}
 	if len(os.Args) > 1 && os.Args[1] == "version" {
 		fmt.Println(version)
 		return nil
@@ -205,7 +220,7 @@ func run() (runErr error) {
 	})
 	host := router.HTTPServer(address, handler)
 	host.ErrorLog = log.New(router.DiagnosticHTTPWriter(diagnosticLog), "", 0)
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	record := instanceRecord{1, o.port}
 	if err = db.Write("instance.json", record); err != nil {
@@ -269,6 +284,14 @@ func run() (runErr error) {
 	}
 	return err
 }
+func defaultUIDir(exe string) string {
+	dir := filepath.Dir(exe)
+	if runtime.GOOS == "darwin" && filepath.Base(dir) == "MacOS" && filepath.Base(filepath.Dir(dir)) == "Contents" {
+		return filepath.Join(filepath.Dir(dir), "Resources", "ui")
+	}
+	return filepath.Join(dir, "ui")
+}
+
 func openExisting(dir string) error {
 	deadline := time.Now().Add(18 * time.Second)
 	var last error

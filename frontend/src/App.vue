@@ -78,7 +78,9 @@ async function applyDaily() {
   } finally { busy.value = false }
 }
 const clientLabel = (item: Client) => item.target === 'cli' ? 'Codex CLI' : 'Codex 桌面版'
-const clientState = (item: Client) => item.state === 'running' ? '已启动' : item.state === 'not_installed' ? '客户端未安装' : '可以启动'
+const clientStates: Record<string, string> = { running: '已启动', not_installed: '客户端未安装', isolation_unverified: '隔离未验证', probe_only: '仅隔离检查' }
+const clientState = (item: Client) => clientStates[item.state] ?? '可以启动'
+const limitedClients = computed(() => clientItems.value.some(item => item.state === 'probe_only' || item.state === 'isolation_unverified'))
 async function runClient(item: Client, action: ClientAction['action']) {
   await act(async () => { clientItems.value = (await api.clientAction({ target: item.target, action }, lifetime.signal)).items }, action === 'login' ? '请在专用客户端中由本人完成登录。' : '专用客户端操作已完成。日常配置未修改。')
 }
@@ -471,7 +473,7 @@ onUnmounted(() => {
               </div>
               <template v-else>
               <NAlert type="info" class="feedback">仅用于排查和验收。此环境不共享日常登录、历史和项目；同一测试目录登录成功后应保留登录。退出路由器会停止它拥有的测试客户端，不关闭日常 Codex。</NAlert>
-              <div class="quick-start">
+              <div v-if="!limitedClients" class="quick-start">
                 <div><span class="step-number">1</span><strong>配置供应商</strong><p>填写地址和密钥，选择新会话默认供应商。</p><NButton secondary @click="panel = 'providers'">前往供应商设置</NButton></div>
                 <div><span class="step-number">2</span><strong>启动专用客户端</strong><p>官方首次使用需在专用窗口登录。日常客户端保持原样。</p></div>
                 <div><span class="step-number">3</span><strong>开始对话</strong><p>成功生成后到线路总览和已绑定会话查看绑定。</p></div>
@@ -481,15 +483,15 @@ onUnmounted(() => {
               <article v-for="item in clientItems" :key="item.target" class="client-card">
                 <div class="section-heading"><div><h2>{{ clientLabel(item) }}</h2><p>{{ item.version || '未检测到版本' }}</p></div><NTag :type="item.state === 'running' ? 'success' : 'default'" :bordered="false">{{ clientState(item) }}</NTag></div>
                 <p>{{ item.message }}</p>
-                <p v-if="item.target === 'desktop'" class="protocol-note">使用独立桌面数据和登录。桌面兼容性尚需真实验收；如果窗口没有打开，请查看近期诊断与版本说明。</p>
-                <p class="saved-route">下次启动：{{ item.mode === 'direct' ? '直连官方（不经过路由器）' : '通过本机路由器' }}</p>
+                <p v-if="item.target === 'desktop' && item.state !== 'isolation_unverified'" class="protocol-note">使用独立桌面数据和登录。桌面兼容性尚需真实验收；如果窗口没有打开，请查看近期诊断与版本说明。</p>
+                <p v-if="item.state !== 'probe_only' && item.state !== 'isolation_unverified'" class="saved-route">下次启动：{{ item.mode === 'direct' ? '直连官方（不经过路由器）' : '通过本机路由器' }}</p>
                 <div class="client-actions">
-                  <NButton type="primary" :disabled="!canWrite || !item.installed || item.state === 'running'" :loading="busy" @click="runClient(item, 'start')">{{ item.target === 'cli' ? '启动测试 CLI' : '启动测试桌面版' }}</NButton>
-                  <NButton v-if="item.target === 'cli'" secondary :disabled="!canWrite || !item.installed || item.state === 'running'" @click="runClient(item, 'login')">登录官方账号</NButton>
+                  <NButton type="primary" :disabled="!canWrite || !item.installed || item.state === 'running' || item.state === 'isolation_unverified'" :loading="busy" @click="runClient(item, 'start')">{{ item.state === 'probe_only' ? '隔离启动检查' : item.target === 'cli' ? '启动测试 CLI' : '启动测试桌面版' }}</NButton>
+                  <NButton v-if="item.target === 'cli' && item.state !== 'probe_only'" secondary :disabled="!canWrite || !item.installed || item.state === 'running'" @click="runClient(item, 'login')">登录官方账号</NButton>
                   <NButton v-if="item.target === 'cli'" secondary :disabled="!canWrite || !item.installed || item.state === 'running'" @click="runClient(item, 'check')">检查官方登录</NButton>
                   <NPopconfirm @positive-click="runClient(item, 'stop')"><template #trigger><NButton secondary type="error" :disabled="!canWrite || item.state !== 'running'">停止专用客户端</NButton></template>只停止本程序启动的专用客户端。正在生成的请求会中断。</NPopconfirm>
                 </div>
-                <div class="client-actions"><NButton text :disabled="!canWrite || item.state === 'running' || item.mode === 'direct'" @click="runClient(item, 'direct')">恢复测试环境直连</NButton><NButton text :disabled="!canWrite || item.state === 'running' || item.mode === 'routed'" @click="runClient(item, 'routed')">接入本机路由器</NButton></div>
+                <div v-if="item.state !== 'probe_only' && item.state !== 'isolation_unverified'" class="client-actions"><NButton text :disabled="!canWrite || item.state === 'running' || item.mode === 'direct'" @click="runClient(item, 'direct')">恢复测试环境直连</NButton><NButton text :disabled="!canWrite || item.state === 'running' || item.mode === 'routed'" @click="runClient(item, 'routed')">接入本机路由器</NButton></div>
                 <details class="profile-details"><summary>专用数据位置</summary><p class="endpoint">{{ item.profile }}</p><p>配置由程序管理，外部修改时会拒绝覆盖。</p></details>
               </article>
               </template>

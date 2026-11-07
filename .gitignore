@@ -27,3 +27,5 @@ state.json
 .codexrouter-routing/
 .env*
 !.env.example
+
+.DS_Store

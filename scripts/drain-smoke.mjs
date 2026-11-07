@@ -5,7 +5,7 @@ import { mkdtemp, mkdir, writeFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
+import { cleanupSyntheticControl } from './synthetic-credentials.mjs';
 import { performance } from 'node:perf_hooks';
 
 const exeIndex = process.argv.indexOf('--exe');
@@ -50,7 +50,7 @@ async function healthy(port, exited) {
 async function scenario(forceTimeout) {
   const name = forceTimeout ? 'five-second-forced-cancel' : 'active-stream-graceful-drain';
   const data = path.join(scratchRoot, name);
-  await mkdir(data);
+  await mkdir(data, { mode: 0o700 });
   const credential = { data, created: false };
   credentials.push(credential);
   let upstreamResponse, upstreamClosed = false, requestCount = 0;
@@ -147,11 +147,8 @@ try {
 } finally {
   for (const child of processes) child.kill();
   for (const credential of credentials) {
-    const normalized = path.normalize(await realpath(credential.data)).toLowerCase();
-    const hash = createHash('sha256').update(normalized).digest('hex');
-    const deletion = spawn(path.join(process.env.SystemRoot, 'System32', 'cmdkey.exe'), [`/delete:CodexRouter/${hash}/control`], { windowsHide: true, stdio: 'ignore' });
-    const code = await new Promise(resolve => { deletion.once('error', () => resolve(-1)); deletion.once('exit', resolve); });
-    if (credential.created && code !== 0) cleanupError = new Error('本轮控制凭据清理失败');
+    try { await cleanupSyntheticControl(credential.data, scratchRoot); }
+    catch (error) { if (credential.created) cleanupError = error; }
   }
   const outputDir = path.resolve('artifacts/verification', `drain-${new Date().toISOString().replace(/[:.]/g, '-')}`);
   await mkdir(outputDir, { recursive: true });

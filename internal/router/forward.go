@@ -83,7 +83,13 @@ func identity(r *http.Request) (threadEvidence, error) {
 		if err != nil {
 			return e, errors.New("SESSION_METADATA_INVALID")
 		}
-		if (metadata.ThreadID != "" && metadata.ThreadID != id) || (metadata.SessionID != "" && e.SessionID != "" && metadata.SessionID != e.SessionID) {
+		// The desktop's ephemeral warm fork keeps the parent in the Session-Id header,
+		// while metadata consistently names the child. Accept only that observed shape;
+		// Session-Id is never a binding key or a substitute for explicit parent evidence.
+		parentSessionHeader := metadata.History == "warm_fork" &&
+			metadata.ThreadID == id && metadata.SessionID == id &&
+			validID(metadata.Parent) && metadata.Parent != id && e.SessionID == metadata.Parent
+		if (metadata.ThreadID != "" && metadata.ThreadID != id) || (metadata.SessionID != "" && e.SessionID != "" && metadata.SessionID != e.SessionID && !parentSessionHeader) {
 			return e, errors.New("SESSION_ID_CONFLICT")
 		}
 		if metadata.SessionID != "" {
@@ -91,7 +97,7 @@ func identity(r *http.Request) (threadEvidence, error) {
 		}
 		e.History, e.Parent = metadata.History, metadata.Parent
 	}
-	// 现有实测仅确认同一线程；桌面协议证据到位前不放宽 thread/session 关系。
+	// The canonical metadata session must still agree with the child thread.
 	if (e.SessionID != "" && e.SessionID != id) || (e.Parent != "" && (!validID(e.Parent) || e.Parent == id)) {
 		return e, errors.New("SESSION_ID_CONFLICT")
 	}

@@ -57,6 +57,75 @@ func TestThreadMetadataRejectsAmbiguousSemanticSources(t *testing.T) {
 	}
 }
 
+func TestDesktopWarmForkParentSessionHeader(t *testing.T) {
+	request := func(thread, session, metadata string) *http.Request {
+		r := httptest.NewRequest(http.MethodPost, "/responses", nil)
+		r.Header.Set("Thread-Id", thread)
+		r.Header.Set("Session-Id", session)
+		r.Header.Set("X-Codex-Turn-Metadata", metadata)
+		return r
+	}
+	raw := `{"thread_id":"child","session_id":"child","history_initialization":"warm_fork","forked_from_thread_id":"parent"}`
+	evidence, err := identity(request("child", "parent", raw))
+	if err != nil || evidence.ThreadID != "child" || evidence.SessionID != "child" || evidence.Parent != "parent" {
+		t.Fatal("observed desktop warm fork rejected", err)
+	}
+	s, p := testState(t)
+	if _, err := s.resolveEvidence(threadEvidence{ThreadID: "parent", History: "new"}); err != nil {
+		t.Fatal(err)
+	}
+	setProviderURL(t, s, BuiltinCompanyID, "http://127.0.0.1:19999")
+	cfg := s.config()
+	cfg.DefaultProviderID = BuiltinCompanyID
+	if err := s.saveConfig(cfg); err != nil {
+		t.Fatal(err)
+	}
+	p.setWriteError(errors.New("synthetic write failure"))
+	if provider, err := s.resolveEvidence(evidence); provider != "" || err == nil || err.Error() != "STORAGE_WRITE_FAILED" {
+		t.Fatal("child inherited before persistence")
+	}
+	p.setWriteError(nil)
+	if provider, err := s.resolveEvidence(evidence); err != nil || provider != BuiltinOfficialID {
+		t.Fatal("child failed to inherit explicit parent", err)
+	}
+	reloaded, err := loadState(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if provider, err := reloaded.resolveEvidence(evidence); err != nil || provider != BuiltinOfficialID {
+		t.Fatal("reloaded child changed route", err)
+	}
+	for _, binding := range reloaded.sessions().Bindings {
+		if binding.ProviderID != BuiltinOfficialID {
+			t.Fatal("session root or default selected")
+		}
+	}
+	unknown, _ := testState(t)
+	if provider, err := unknown.resolveEvidence(evidence); provider != "" || err == nil || err.Error() != "SESSION_REGISTRATION_REQUIRED" {
+		t.Fatal("unknown parent used default")
+	}
+	for _, bad := range []struct{ session, metadata string }{
+		{"other", raw},
+		{"parent", strings.Replace(raw, `"warm_fork"`, `"new"`, 1)},
+		{"parent", strings.Replace(raw, `"warm_fork"`, `"cold_fork"`, 1)},
+		{"parent", strings.Replace(raw, `"warm_fork"`, `"ephemeral_fork"`, 1)},
+		{"parent", strings.Replace(raw, `"session_id":"child"`, `"session_id":"other"`, 1)},
+		{"parent", strings.Replace(raw, `"thread_id":"child"`, `"thread_id":"parent"`, 1)},
+		{"parent", `{"thread_id":"child","session_id":"child","history_initialization":"warm_fork"}`},
+		{"parent", `{"session_id":"child","history_initialization":"warm_fork","forked_from_thread_id":"parent"}`},
+		{"parent", strings.Replace(raw, `"forked_from_thread_id":"parent"`, `"forked_from_thread_id":"child"`, 1)},
+	} {
+		if _, err := identity(request("child", bad.session, bad.metadata)); err == nil {
+			t.Fatal("unproven identity combination accepted")
+		}
+	}
+	duplicate := request("child", "parent", raw)
+	duplicate.Header.Add("Session-Id", "parent")
+	if _, err := identity(duplicate); err == nil {
+		t.Fatal("duplicate session header accepted")
+	}
+}
+
 func TestUnobservedForkKindsCannotUseKnownParentOrSessionRoot(t *testing.T) {
 	s, _ := testState(t)
 	if _, err := s.resolveEvidence(threadEvidence{ThreadID: "parent", History: "new"}); err != nil {
