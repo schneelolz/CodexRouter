@@ -17,7 +17,7 @@
 
 默认套件跳过的显式探针为：浏览器夹具、隔离 CLI、内置 app-server、真实配置只读预检、真实客户端发现和长时诊断 soak。前三项在本轮另外运行；后三项未运行，不能计作通过。未使用真实账号、读取真实认证或执行真实配置接入/恢复。真实桌面隔离/UI、最低系统版本、Developer ID/公证/Gatekeeper和长稳仍未验收。
 
-合并冲突处理保留 Mac 平台命令和 SIGTERM 排空，同时接入远端退出日志与脱敏 HTTP 日志；其余共享文件自动合并后通过上述回归。原始合成测试证据在本地忽略目录 `artifacts/verification/macos-20261107T135339Z` 和 `artifacts/verification/integration-*`。GitHub 的 Windows、前端及两种 macOS runner 结果以 PR / Actions 的对应提交为准，本地编译不替代平台 CI。
+合并冲突处理保留 Mac 平台命令和 SIGTERM 排空，同时接入远端退出日志与脱敏 HTTP 日志；其余共享文件自动合并后通过上述回归。原始合成测试证据在本地忽略目录 `artifacts/verification/macos-20261107T135339Z` 和 `artifacts/verification/integration-*`。GitHub 的 Windows、前端及两种 macOS runner 结果以 PR / Actions 的对应提交为准，本地编译不替代平台 CI。全量公开 Markdown 相对链接检查通过；修复了两处历史链接指向未发布资料的问题。
 
 # macOS 开发历史验证摘要
 

@@ -16,7 +16,7 @@ schema3不能由旧二进制打开。替换实例前正常停止并整体备份�
 
 RequestMetrics新增`protocol_completed_ms`；存在known_fields中才可用。`elapsed_ms`保留完整连接结束时间；有明确终止事件时列表总耗时和TPS使用协议结束时间，详情并列连接时间。schema2不变，旧记录缺少指标时不补造。
 
-非缓存输入仅在input/cache_read/cache_write全部known且桶一致时相减计算；存储与DTO中的input_tokens仍为含缓存总量。见[本轮说明](../docs/界面与续期验收-20261106.md)。
+非缓存输入仅在input/cache_read/cache_write全部known且桶一致时相减计算；存储与DTO中的input_tokens仍为含缓存总量。见[页面与指标](../docs/ui-layout.md)。
 
 ## 1.6 请求结果与用量
 
@@ -24,7 +24,7 @@ RequestActivity新增outcome、model、request_type、error_stage和metrics。me
 
 requests新增success/unconfirmed筛选，新UI使用success/error/processing/unconfirmed四类；旧all/normal保留。normal仍兼容HTTP2xx正常结束，不能作为生成成功依据。语义错误保留HTTP原始状态，因此HTTP200也可为error。API版本为1.6，配套UI拒绝旧于1.6的后端。
 
-SQLite schema2事务迁移保留旧记录，旧HTTP200归待确认。回滚需使用升级前完整数据目录副本，旧版不兼容schema2。详见[对照审查](../docs/sub2api-对照审查-20261106.md)。
+SQLite schema2事务迁移保留旧记录，旧HTTP200归待确认。回滚需使用升级前完整数据目录副本，旧版不兼容schema2。详见[协议与路由](../docs/protocol.md)。
 
 ## 管理API 1.5 增量
 
@@ -38,7 +38,7 @@ SQLite schema2事务迁移保留旧记录，旧HTTP200归待确认。回滚需�
 
 # 管理接口契约
 
-`openapi.json` 是 OpenAPI 3.0.3 规范，管理接口固定在 `/api/v1/`，当前版本 1.4.0。推理正文不受此规范转换；供应商模型覆盖改写正文的规则见 `docs/protocol.md`。
+`openapi.json` 是 OpenAPI 3.0.3 规范，管理接口固定在 `/api/v1/`，当前版本 1.8.0。推理正文不受此规范转换；供应商模型覆盖改写正文的规则见 `docs/protocol.md`。
 
 供应商是独立资源：`/providers` 维护名称、认证方式、基址与模型覆盖，`/credentials/{providerId}` 维护该供应商的密钥（供应商标识同时是系统凭据名称）。新建供应商只接受 `ProviderCreateKind=api_key`；`official` 仅保留给内置官方供应商，避免把客户端官方令牌发往自定义地址。已绑定供应商必须保留非空基址，v1 迁移与 v2 启动校验都会拒绝缺基址的绑定。配置接口只保存默认供应商、超时与并发，不再包含供应商基址，因此已有供应商的资源不会被整体覆盖。页面必须按 `api_version` 次版本判断兼容性。
 
