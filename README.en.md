@@ -10,7 +10,7 @@ Local Windows router · Session bindings · Usage and latency · System tray
 
 [中文](README.md) · [English](README.en.md)
 
-[![CI](https://github.com/schneelolz/CodexRouter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/schneelolz/CodexRouter/actions/workflows/ci.yml) [![Candidate](https://img.shields.io/badge/candidate-0.8.0--test--compact--ui1-2563eb)](docs/ui-layout.md) [![Windows](https://img.shields.io/badge/platform-Windows_x64-0078D4)](#quick-start) [![Go](https://img.shields.io/badge/backend-Go-00ADD8?logo=go&logoColor=white)](go.mod) [![Vue](https://img.shields.io/badge/frontend-Vue_3-42B883?logo=vuedotjs&logoColor=white)](frontend/package.json) [![License](https://img.shields.io/badge/license-AGPL--3.0--only-f97316)](LICENSE)
+[![CI](https://github.com/schneelolz/CodexRouter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/schneelolz/CodexRouter/actions/workflows/ci.yml) [![Candidate](https://img.shields.io/badge/candidate-0.9.0--test--diagnostics--auth1-2563eb)](docs/ui-layout.md) [![Windows](https://img.shields.io/badge/platform-Windows_x64-0078D4)](#quick-start) [![Go](https://img.shields.io/badge/backend-Go-00ADD8?logo=go&logoColor=white)](go.mod) [![Vue](https://img.shields.io/badge/frontend-Vue_3-42B883?logo=vuedotjs&logoColor=white)](frontend/package.json) [![License](https://img.shields.io/badge/license-AGPL--3.0--only-f97316)](LICENSE)
 
 [Quick start](#quick-start) · [Features](#features) · [User guide](docs/quick-start.md) · [Development](docs/handoff.md)
 
@@ -41,9 +41,10 @@ flowchart LR
 | Latency and throughput | Time to first token, total duration, output TPS, and two independently colored latency indicators |
 | History management | Backend pagination, retention policies, and confirmed cleanup without removing session bindings |
 | Daily client integration | Preview and apply the Codex connection address, preserve existing login/history/project directories, and restore the original connection value |
+| Persistent diagnostics | Rotating logs retain connection stages, stream termination, authentication events, and upstream request IDs across restarts |
 | System tray | Launch the service and browser UI, keep running after the browser closes, and reopen the existing instance on repeated launch |
 
-The UI has grouped request and session menus, compact tables, and scrolling limited to the relevant data area. Missing metrics are distinguished from actual zero values, and generation failures returned inside HTTP 200 responses are classified as errors. See [UI and metrics](docs/ui-layout.md).
+The UI has grouped request and session menus, compact tables, and scrolling limited to the relevant data area. Missing metrics are distinguished from actual zero values, and generation failures returned inside HTTP 200 responses are classified as errors. See [UI and metrics](docs/ui-layout.md). The management UI supports bootstrap recovery and CSRF renewal across tabs. See [diagnostics](docs/diagnostics.md) for log locations and fields.
 
 ## Quick start
 
@@ -54,7 +55,7 @@ Building requires **Windows x64, PowerShell 7, Go 1.27.3, and Node.js 24**. No G
 ```powershell
 git clone https://github.com/schneelolz/CodexRouter.git
 cd CodexRouter
-.\scripts\build.ps1 -OutputDir artifacts\build-local -Version 0.8.0-test-compact-ui1
+.\scripts\build.ps1 -OutputDir artifacts\build-local -Version 0.9.0-test-diagnostics-auth1
 ```
 
 Keep `codexrouter.exe` and its adjacent `ui/` directory together. The built application runs without Go, Node.js, or Python installed. Supply the version label explicitly with `-Version`.
@@ -82,7 +83,7 @@ To revert, use **恢复接入前配置** (Restore previous connection) on the Da
 
 ## Project status
 
-The current source baseline is the **0.8 candidate**, with management API **1.8** and SQLite history schema **3**. It is intended for development and controlled trials. See the [acceptance matrix](docs/acceptance-matrix.md) for detailed scope.
+The current source baseline is the **0.9 candidate**, with management API **1.8** and SQLite history schema **3**. It is intended for development and controlled trials. See the [acceptance matrix](docs/acceptance-matrix.md) for detailed scope.
 
 | Area | Status |
 |---|---|

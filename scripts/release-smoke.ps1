@@ -99,6 +99,17 @@ try {
     Stop-Isolated $hosted
     $results.Add(@{ check = '独立静态托管及运行时页面替换，无需重新编译'; passed = $true })
     $results.Add(@{ check = '前台 quit 限时正常退出'; passed = $true })
+    $runtimeLog = Join-Path $data 'logs/router.log'
+    if (-not (Test-Path -LiteralPath $runtimeLog)) { throw '实际程序没有生成诊断日志。' }
+    $runtimeRows = @(Get-Content -LiteralPath $runtimeLog | ForEach-Object { $_ | ConvertFrom-Json })
+    $latestRun = $runtimeRows[-1].run_id
+    $latestEvents = @($runtimeRows | Where-Object { $_.run_id -eq $latestRun })
+    foreach ($eventName in @('process_start', 'process_ready', 'process_stop', 'auth_rejected')) {
+        if (-not ($latestEvents | Where-Object { $_.event -eq $eventName })) { throw "实际程序缺少日志事件 $eventName" }
+    }
+    if ($latestEvents[-1].event -ne 'process_stop' -or $latestEvents[-1].fields.reason -ne 'normal') { throw '正常退出日志未排空。' }
+    $results.Add(@{ check = '实际程序启动、认证拒绝、重启保留及正常退出日志'; passed = $true })
+
     $results | Format-Table -AutoSize
 } finally {
     foreach ($entry in $processes) {

@@ -10,8 +10,9 @@ import (
 
 type activityWriter struct {
 	http.ResponseWriter
-	started     time.Time // 入口开始时间，耗时不包含记录落盘。
-	provider    string    // 实际解析出的供应商。
+	diag        *requestDiagnostic // 当前请求的脱敏连接跟踪。
+	started     time.Time          // 入口开始时间，耗时不包含记录落盘。
+	provider    string             // 实际解析出的供应商。
 	status      int
 	code        string               // 固定错误类别，不保存原始上游错误。
 	stage       string               // 错误发生阶段。
@@ -122,6 +123,9 @@ func (s *Server) endActivity(id int, tracked *activityWriter, interrupted bool) 
 		} else {
 			s.record(tracked.provider, item.Result, item.Outcome == "success" || (item.RequestType == "auxiliary" && item.Status >= 200 && item.Status < 300 && !interrupted))
 		}
+	}
+	if tracked.diag != nil {
+		tracked.diag.finish(item, tracked)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()

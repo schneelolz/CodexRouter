@@ -25,6 +25,7 @@ type responseObservation struct {
 	model     string             // 响应报告的模型标识。
 	kind      string             // 根据响应类型识别的请求类别。
 	terminal  string             // 已观察到的终止结果。
+	errorType string             // 白名单内的上游错误类型，不保存错误说明。
 	bareError bool               // 尚未被权威完成覆盖的裸错误。
 	visible   bool               // 已经出现有效输出。
 	lost      bool               // 解析不完整，不能据此确认成功。
@@ -282,6 +283,15 @@ func (o *responseObservation) observe(data []byte, event string) {
 		}
 		response = inner
 	}
+	for _, owner := range []map[string]json.RawMessage{root, response} {
+		var detail map[string]json.RawMessage
+		if json.Unmarshal(owner["error"], &detail) == nil {
+			o.errorType = safeUpstreamErrorType(jsonString(detail["type"]))
+			if o.errorType == "unknown" {
+				o.errorType = safeUpstreamErrorType(jsonString(detail["code"]))
+			}
+		}
+	}
 	if model := jsonString(response["model"]); safeModel(model) {
 		o.model = model
 	}
@@ -506,5 +516,15 @@ func (o *responseObservation) apply(item *api.RequestActivity) {
 		item.ErrorStage = "stream"
 	default:
 		item.Result = "RESULT_UNCONFIRMED"
+	}
+}
+
+// safeUpstreamErrorType 只保留固定分类，不保存上游自由文本。
+func safeUpstreamErrorType(value string) string {
+	switch value {
+	case "server_error", "upstream_error", "rate_limit_error", "rate_limit_exceeded", "invalid_request_error", "authentication_error", "permission_error", "overloaded_error", "context_length_exceeded", "insufficient_quota":
+		return value
+	default:
+		return "unknown"
 	}
 }

@@ -2,6 +2,7 @@ package router
 
 import (
 	"codexrouter/internal/daily"
+	"encoding/json"
 	"net"
 	"net/http"
 	"os"
@@ -41,8 +42,27 @@ func TestBrowserFixtureServer(t *testing.T) {
 	s, _, _ := newSecurityServer(t, func(o *Options) { o.UIDir = ui; o.Authority = authority; o.Daily = dailyManager })
 	s.bootstrap = digest(token)
 	s.bootstrapExpiry = time.Now().Add(2 * time.Minute)
-	host := HTTPServer(authority, s)
-	timer := time.AfterFunc(115*time.Second, func() { _ = host.Close() })
+	// 控制入口只编入测试程序，且仅接受当前夹具的随机凭据。
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/__fixture/bootstrap" || r.URL.Path == "/__fixture/expire" {
+			if r.Method != "POST" || r.Host != authority || !equal(r.Header.Get("X-Fixture-Key"), token) {
+				w.WriteHeader(403)
+				return
+			}
+			if r.URL.Path == "/__fixture/expire" {
+				s.mu.Lock()
+				s.sessionExpiry = time.Now().Add(-time.Second)
+				s.mu.Unlock()
+				respond(w, 200, map[string]bool{"expired": true})
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]string{"token": s.Bootstrap()})
+			return
+		}
+		s.ServeHTTP(w, r)
+	})
+	host := HTTPServer(authority, handler)
+	timer := time.AfterFunc(230*time.Second, func() { _ = host.Close() })
 	defer timer.Stop()
 	if err = host.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		t.Fatal(err)

@@ -63,6 +63,7 @@ export class ApiClient {
     const session = token
       ? await this.request<AuthSession>('auth/exchange', 'POST', { token }, signal)
       : await this.request<AuthSession>('auth/session', 'GET', undefined, signal)
+    signal?.throwIfAborted()
     this.csrf = session.csrf_token
   }
 
@@ -70,7 +71,15 @@ export class ApiClient {
   dailyPreview(input: DailyAction, signal?: AbortSignal) { return this.request<DailyPreview>('daily/preview', 'POST', input, signal) }
   dailyApply(input: DailyApply, signal?: AbortSignal) { return this.request<DailyStatus>('daily/apply', 'POST', input, signal) }
   activity(signal?: AbortSignal) { return this.request<Activity>('activity', 'GET', undefined, signal) }
-  renew(signal?: AbortSignal) { return this.request<AuthSession>('auth/renew', 'POST', undefined, signal) }
+  async renew(signal?: AbortSignal) {
+    try { return await this.request<AuthSession>('auth/renew', 'POST', undefined, signal) }
+    catch (error) {
+      // 仅恢复共享 Cookie 对应的 CSRF；业务写操作不会因此重放。
+      if (!(error instanceof ApiError) || error.status !== 403 || error.code !== 'CSRF_REQUIRED') throw error
+      await this.authenticate(null, signal)
+      return this.request<AuthSession>('auth/renew', 'POST', undefined, signal)
+    }
+  }
   requestPage(limit: number, page: number, snapshot: string, filter: string, signal?: AbortSignal) { return this.request<RequestPage>(`requests?${new URLSearchParams({ limit: String(limit), page: String(page), snapshot, filter })}`, 'GET', undefined, signal) }
   requests(limit: number, cursor: string, filter: string, signal?: AbortSignal) { return this.request<RequestPage>(`requests?${new URLSearchParams({ limit: String(limit), cursor, filter })}`, 'GET', undefined, signal) }
   sessionPage(kind: string, limit = 20, cursor = '', signal?: AbortSignal) { return this.request<SessionPage>(`sessions/page?${new URLSearchParams({ kind, limit: String(limit), cursor })}`, 'GET', undefined, signal) }

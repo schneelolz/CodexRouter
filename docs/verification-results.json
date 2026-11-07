@@ -1,73 +1,79 @@
 {
-  "date": "2026-11-06",
-  "functional_baseline": "0.5.0-test-usage1",
-  "management_api": "1.6.0",
-  "sqlite_schema": 2,
+  "date": "2026-11-07",
+  "functional_baseline": "0.9.0-test-diagnostics-auth1",
+  "management_api": "1.8",
+  "sqlite_schema": 3,
   "checks": [
     {
       "check": "管理契约及生成一致性",
       "exit_code": 0,
-      "seconds": 0.22
+      "seconds": 0.33
     },
     {
       "check": "go vet",
       "exit_code": 0,
-      "seconds": 1.33
+      "seconds": 2.55
     },
     {
       "check": "go test",
       "exit_code": 0,
-      "seconds": 35.94
+      "seconds": 96.92
     },
     {
       "check": "go test -race",
       "exit_code": 0,
-      "seconds": 47.83
+      "seconds": 138.23
     },
     {
       "check": "npm ci",
       "exit_code": 0,
-      "seconds": 7.8
+      "seconds": 98.02
     },
     {
       "check": "前端类型检查",
       "exit_code": 0,
-      "seconds": 3.68
+      "seconds": 17.39
     },
     {
       "check": "前端单元测试",
       "exit_code": 0,
-      "seconds": 2.37
+      "seconds": 2.92
     },
     {
       "check": "前端生产构建",
       "exit_code": 0,
-      "seconds": 2.16
+      "seconds": 2.65
     },
     {
       "check": "前端浏览器测试",
       "exit_code": 0,
-      "seconds": 76.12
+      "seconds": 343.62
     },
     {
       "check": "真实 Go API 与生产页面联调",
       "exit_code": 0,
-      "seconds": 10.53
+      "seconds": 23.0,
+      "supplemental": true
     }
   ],
-  "unit_tests_passed": 13,
-  "browser_tests_passed": 15,
-  "go_api_browser_integration_tests_passed": 1,
-  "startup_smoke_passed": 5,
-  "drain_smoke_passed": 2,
-  "production_instance_changed": false,
-  "real_upstream_verified": false,
-  "authenticated_desktop_verified": false,
-  "subagent_compatibility_verified": false,
-  "privacy_review": {
-    "old_history_included": false,
-    "original_protocol_records_included": false,
-    "reviewed_synthetic_path_fixture": true,
-    "raw_test_evidence_included": false
-  }
+  "frontend_tests": 24,
+  "browser_tests": 22,
+  "real_go_integration_tests": 2,
+  "standalone_smoke_tests": 6,
+  "soak": {
+    "duration_seconds": 1800,
+    "requests": 1639,
+    "written_logs": 4985,
+    "dropped_logs": 0,
+    "write_failures": 0,
+    "final_active_requests": 0,
+    "final_upstream_connections": 0,
+    "final_heap_bytes": 1222200,
+    "final_goroutines": 6
+  },
+  "notes": [
+    "Functional workspace results. The final integration check passed in a supplemental run.",
+    "Raw logs and browser evidence are retained locally.",
+    "Public checkout validation and GitHub Actions are reported separately."
+  ]
 }

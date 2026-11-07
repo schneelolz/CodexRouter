@@ -2,6 +2,7 @@ package router
 
 import (
 	"bytes"
+	"codexrouter/internal/diaglog"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -9,6 +10,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"strings"
 	"syscall"
@@ -157,6 +159,10 @@ func (s *Server) forward(w http.ResponseWriter, r *http.Request) {
 	started := time.Now()
 	requestID := s.beginActivity(r)
 	tracked := &activityWriter{ResponseWriter: w, started: started}
+	cfg := s.state.config()
+	if s.log != nil {
+		tracked.diag = newRequestDiagnostic(s, requestID, started, r, cfg)
+	}
 	w = tracked
 	defer func() {
 		abnormal := recover()
@@ -198,7 +204,6 @@ func (s *Server) forward(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	cfg := s.state.config()
 	if s.active.Add(1) > int64(cfg.MaxConcurrent) {
 		s.active.Add(-1)
 		fail(w, 429, "CONCURRENCY_LIMIT", "转发并发已达上限")
@@ -328,13 +333,26 @@ func (s *Server) forward(w http.ResponseWriter, r *http.Request) {
 		copyProtocolHeaders(up.Header, r.Header, "User-Agent", "Authorization", "Chatgpt-Account-Id", "Openai-Organization", "Openai-Project", "Openai-Beta", "Originator", "Thread-Id", "Session-Id", "X-Codex-Turn-Metadata", "X-Codex-Turn-State", "X-Codex-Beta-Features", "Version", "X-Client-Request-Id", "X-Codex-Window-Id", "X-Openai-Internal-Codex-Responses-Lite")
 	}
 	controller := http.NewResponseController(w)
+	if tracked.diag != nil {
+		up = up.WithContext(httptrace.WithClientTrace(up.Context(), tracked.diag.trace()))
+		if up.Body != nil {
+			up.Body = &diagnosticBody{ReadCloser: up.Body, d: tracked.diag}
+		}
+	}
 	resp, err := s.client(provider.ID, cfg).Do(up)
 	if err != nil {
+		if tracked.diag != nil {
+			tracked.diag.failed(err)
+			tracked.diag.emit("upstream_request_failed", diaglog.Fields{"network_error": diagnosticError(err), "provider_id": provider.ID})
+		}
 		code := networkCode(err)
 		fail(w, 502, code, networkMessage(code))
 		return
 	}
 	defer resp.Body.Close()
+	if tracked.diag != nil {
+		tracked.diag.headers(resp)
+	}
 	tracked.observation = newResponseObservation(resp, started, r.Method+" "+r.URL.Path)
 	copyProtocolHeaders(w.Header(), resp.Header, "Content-Type", "Cache-Control", "Retry-After", "X-Request-Id", "Content-Encoding")
 	if provider.Kind == api.ProviderKindOfficial {
@@ -357,10 +375,17 @@ func (s *Server) forward(w http.ResponseWriter, r *http.Request) {
 		timer := time.AfterFunc(time.Duration(cfg.IdleTimeoutMS)*time.Millisecond, cancel)
 		n, re := resp.Body.Read(buf)
 		arrived := time.Now()
+		if tracked.diag != nil {
+			tracked.diag.received(n, arrived)
+		}
 		stopped := timer.Stop()
 		if n > 0 {
 			_ = controller.SetWriteDeadline(time.Now().Add(time.Duration(cfg.WriteTimeoutMS) * time.Millisecond))
-			if _, err = w.Write(buf[:n]); err != nil {
+			written, writeErr := w.Write(buf[:n])
+			if tracked.diag != nil {
+				tracked.diag.written += int64(written)
+			}
+			if err = writeErr; err != nil {
 				tracked.failed = true
 				tracked.code = "CLIENT_WRITE_FAILED"
 				tracked.stage = "client"
@@ -386,6 +411,9 @@ func (s *Server) forward(w http.ResponseWriter, r *http.Request) {
 			code = streamFailureCode(r.Context(), s.ctx, code)
 			tracked.code = code
 			tracked.stage = "stream"
+			if tracked.diag != nil {
+				tracked.diag.emit("stream_read_failed", diaglog.Fields{"network_error": diagnosticError(re), "provider_id": provider.ID, "reason": code})
+			}
 			// 中断 HTTP 流而非伪造成功 EOF/完成事件，宿主会关闭 H1 或重置 H2。
 			panic(http.ErrAbortHandler)
 		}

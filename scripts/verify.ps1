@@ -14,6 +14,7 @@ $previousPath = $env:PATH
 $previousCGO = $env:CGO_ENABLED
 $previousCC = $env:CC
 $previousToolchain = $env:GOTOOLCHAIN
+$previousVerificationLog = $env:CODEXROUTER_VERIFY_LOG_DIR
 function Invoke-Checked([string]$Name, [string]$Executable, [string[]]$Arguments) {
     Write-Host "执行：$Name"
     $watch = [Diagnostics.Stopwatch]::StartNew()
@@ -26,14 +27,16 @@ Push-Location $repoRoot
 Start-Transcript -Path (Join-Path $logDir 'output.txt') | Out-Null
 try {
     $env:GOTOOLCHAIN = 'local'
+    $env:CODEXROUTER_VERIFY_LOG_DIR = $logDir
     $env:PATH = $clangBin + [IO.Path]::PathSeparator + $env:PATH
     $env:CC = 'clang'
     $env:CGO_ENABLED = '1'
     Invoke-Checked '管理契约及生成一致性' 'node' @('scripts/contract-check.mjs')
     # 只检查源码包：artifacts 下保留了历史验收复制的 Go 源码，不属于本模块。
     Invoke-Checked 'go vet' $goExe @('vet', './cmd/...', './internal/...')
-    Invoke-Checked 'go test' $goExe @('test', './cmd/...', './internal/...', '-count=1', '-timeout', '180s')
-    Invoke-Checked 'go test -race' $goExe @('test', '-race', './cmd/...', './internal/...', '-count=1', '-timeout', '180s')
+    Invoke-Checked 'go test' $goExe @('test', './cmd/...', './internal/...', '-count=1', '-timeout', '600s')
+    # 纯Go SQLite的大数据检查在race插桩及本机并行负载下需要更长预算。
+    Invoke-Checked 'go test -race' $goExe @('test', '-race', './cmd/...', './internal/...', '-count=1', '-timeout', '600s')
     Invoke-Checked 'npm ci' 'npm.cmd' @('--prefix', 'frontend', 'ci')
     Invoke-Checked '前端类型检查' 'npm.cmd' @('--prefix', 'frontend', 'run', 'typecheck')
     Invoke-Checked '前端单元测试' 'npm.cmd' @('--prefix', 'frontend', 'run', 'test')
@@ -49,5 +52,6 @@ try {
     $env:CC = $previousCC
     $env:CGO_ENABLED = $previousCGO
     $env:GOTOOLCHAIN = $previousToolchain
+    $env:CODEXROUTER_VERIFY_LOG_DIR = $previousVerificationLog
     Pop-Location
 }

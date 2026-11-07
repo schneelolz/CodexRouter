@@ -20,12 +20,15 @@ import (
 	"codexrouter/internal/api"
 	"codexrouter/internal/clients"
 	"codexrouter/internal/daily"
+	"codexrouter/internal/diaglog"
 	"codexrouter/internal/history"
 	"codexrouter/internal/platform"
 )
 
 // Options 定义 API、凭据和可替换静态目录的边界。
 type Options struct {
+	// Log 提供可选的有界诊断日志。
+	Log *diaglog.Logger
 	// HistoryPath 指定独立历史库；留空仅供内存夹具。
 	HistoryPath string
 	// Store 提供配置与绑定的原子持久化。
@@ -46,6 +49,7 @@ type Options struct {
 
 // Server 在同一 loopback 地址提供互相隔离的管理与推理入口。
 type Server struct {
+	log             *diaglog.Logger               // 进程拥有的异步日志器，服务不负责关闭。
 	history         *history.Store                // 独立展示历史，不是路由绑定权威。
 	historyDegraded atomic.Bool                   // 本轮出现过记录缺口时持续提示。
 	activityIDs     map[int]int                   // 当前进程请求与数据库主键的对应。
@@ -92,7 +96,7 @@ func New(o Options) (*Server, error) {
 	if err != nil {
 		return nil, errors.New("本地控制凭据不可用")
 	}
-	s := &Server{state: st, creds: o.Credentials, authority: o.Authority, origins: map[string]bool{"http://" + o.Authority: true}, clients: make(map[string]*http.Client), diagnostics: []api.Diagnostic{}, upstreams: make(map[string]api.ProviderStatus)}
+	s := &Server{log: o.Log, state: st, creds: o.Credentials, authority: o.Authority, origins: map[string]bool{"http://" + o.Authority: true}, clients: make(map[string]*http.Client), diagnostics: []api.Diagnostic{}, upstreams: make(map[string]api.ProviderStatus)}
 	s.clientManager = o.Clients
 	s.dailyManager = o.Daily
 	s.ctx, s.cancel = context.WithCancel(context.Background())
@@ -167,6 +171,7 @@ func (s *Server) Bootstrap() string {
 	v := randomToken()
 	s.bootstrap = digest(v)
 	s.bootstrapExpiry = time.Now().Add(5 * time.Minute)
+	s.authEvent("bootstrap_issued", "local_open")
 	return v
 }
 
@@ -227,10 +232,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'")
 	if r.Host != s.authority {
+		s.authEvent("request_rejected", "host_mismatch")
 		fail(w, 403, "INVALID_HOST", "Host 不在允许列表")
 		return
 	}
 	if origin := r.Header.Get("Origin"); origin != "" && !s.origins[origin] {
+		s.authEvent("request_rejected", "origin_mismatch")
 		fail(w, 403, "INVALID_ORIGIN", "拒绝外站请求")
 		return
 	}
@@ -264,11 +271,20 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *Server) authenticated(r *http.Request) (string, bool) {
 	c, e := r.Cookie("codexrouter_session")
 	if e != nil {
+		s.authEvent("auth_rejected", "cookie_missing")
 		return "", false
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.csrf, time.Now().Before(s.sessionExpiry) && equal(s.session, digest(c.Value))
+	if !time.Now().Before(s.sessionExpiry) {
+		s.authEvent("auth_rejected", "session_expired")
+		return "", false
+	}
+	if !equal(s.session, digest(c.Value)) {
+		s.authEvent("auth_rejected", "cookie_mismatch")
+		return "", false
+	}
+	return s.csrf, true
 }
 
 func (s *Server) manage(w http.ResponseWriter, r *http.Request) {
@@ -284,14 +300,23 @@ func (s *Server) manage(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		if time.Now().After(s.bootstrapExpiry) || !equal(s.bootstrap, digest(in.Token)) {
+			reason := "bootstrap_invalid_or_consumed"
+			if time.Now().After(s.bootstrapExpiry) {
+				reason = "bootstrap_expired"
+			}
+			s.authEvent("auth_rejected", reason)
 			fail(w, 401, "AUTH_REQUIRED", "引导链接无效或已使用，请从程序重新打开页面")
 			return
+		}
+		if s.session != "" {
+			s.authEvent("session_replaced", "new_bootstrap")
 		}
 		s.bootstrap = ""
 		token := randomToken()
 		s.session = digest(token)
 		s.csrf = randomToken()
 		s.sessionExpiry = time.Now().Add(8 * time.Hour)
+		s.authEvent("bootstrap_exchanged", "ok")
 		http.SetCookie(w, &http.Cookie{Name: "codexrouter_session", Value: token, Path: "/api/v1/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: 8 * 3600})
 		respond(w, 200, api.AuthSession{CSRFToken: s.csrf})
 		return
@@ -302,6 +327,11 @@ func (s *Server) manage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method != http.MethodGet && (!s.origins[r.Header.Get("Origin")] || !equal(csrf, r.Header.Get("X-CSRF-Token"))) {
+		reason := "csrf_mismatch"
+		if !s.origins[r.Header.Get("Origin")] {
+			reason = "origin_mismatch"
+		}
+		s.authEvent("auth_rejected", reason)
 		fail(w, 403, "CSRF_REQUIRED", "写操作需要同源 Origin 与 CSRF 凭据")
 		return
 	}
@@ -439,6 +469,13 @@ func (s *Server) manage(w http.ResponseWriter, r *http.Request) {
 			s.mu.Lock()
 			items := append([]api.Diagnostic{}, s.diagnostics...)
 			s.mu.Unlock()
+			stats := s.log.Snapshot()
+			if stats.Dropped > 0 {
+				items = append(items, api.Diagnostic{Time: time.Now().UTC().Format(time.RFC3339), Code: "LOG_DROPPED", ProviderID: "local"})
+			}
+			if stats.WriteFailures > 0 {
+				items = append(items, api.Diagnostic{Time: time.Now().UTC().Format(time.RFC3339), Code: "LOG_WRITE_FAILED", ProviderID: "local"})
+			}
 			respond(w, 200, api.Diagnostics{Items: items})
 			return
 		}

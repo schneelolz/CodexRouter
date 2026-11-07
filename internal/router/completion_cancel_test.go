@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"codexrouter/internal/api"
+	"codexrouter/internal/diaglog"
 	"github.com/klauspost/compress/zstd"
 )
 
@@ -48,6 +49,21 @@ func TestTerminalDeliveredBeforeClientCancel(t *testing.T) {
 			}))
 			defer up.Close()
 			s, host := liveRouter(t, up.URL)
+			cfg := s.state.config()
+			cfg.ConnectTimeoutMS = 3000
+			cfg.HeaderTimeoutMS = 3000
+			cfg.IdleTimeoutMS = 3000
+			cfg.WriteTimeoutMS = 3000
+			if err := s.state.saveConfig(cfg); err != nil {
+				t.Fatal(err)
+			}
+			logDir := t.TempDir()
+			logger, err := diaglog.Open(logDir, "completion-cancel")
+			if err != nil {
+				t.Fatal(err)
+			}
+			s.log = logger
+			defer logger.Close()
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			request := inferenceRequest(t, host.URL, "terminal-cancel-test", "new").WithContext(ctx)
@@ -72,6 +88,19 @@ func TestTerminalDeliveredBeforeClientCancel(t *testing.T) {
 			}
 			if tc.outcome == "success" && (item.Observation.TerminalResult != "RESPONSE_COMPLETED" || item.Metrics.OutputTokens != 630 || item.Observation.MetricsStatus != "available") {
 				t.Fatalf("完成结果或用量丢失: %+v", item)
+			}
+			logger.Close()
+			for _, row := range readDiagnostic(t, logDir) {
+				if row["event"] != "request_end" {
+					continue
+				}
+				fields := row["fields"].(map[string]any)
+				if fields["transport_source"] != "client" || fields["transport_result"] != "REQUEST_CANCELED" {
+					t.Fatal("传输来源不正确", fields)
+				}
+				if tc.result != "REQUEST_CANCELED" && fields["result_source"] != "upstream_protocol" {
+					t.Fatal("协议结果被传输来源覆盖", fields)
+				}
 			}
 		})
 	}

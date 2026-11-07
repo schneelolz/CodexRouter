@@ -124,3 +124,40 @@ test('生产静态目录与真实 Go 管理 API 联调', async ({ page, context 
   await expect(page.getByText('管理认证已失效', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '保存超时与并发' })).toBeDisabled()
 })
+
+
+test('真实后端旧页重新引导、多标签续期和到期恢复', async ({ page, context }) => {
+ const key = process.env.CODEXROUTER_E2E_TOKEN!
+ const bootstrap = async () => {
+  const response = await context.request.post('/__fixture/bootstrap', { headers: { 'X-Fixture-Key': key } })
+  expect(response.status()).toBe(200)
+  return (await response.json()).token as string
+ }
+ await page.setViewportSize({ width: 1440, height: 900 })
+ await page.goto(`/#token=${await bootstrap()}`)
+ await expect(page.getByText('本地服务运行中')).toBeVisible()
+ const renewals: number[] = []
+ page.on('response', response => { if (response.url().endsWith('/api/v1/auth/renew')) renewals.push(response.status()) })
+ const other = await context.newPage()
+ await other.goto(`/#token=${await bootstrap()}`)
+ await expect(other.getByText('本地服务运行中')).toBeVisible()
+ await page.bringToFront()
+ await expect.poll(() => page.evaluate(() => document.visibilityState)).toBe('visible')
+ // 明确触发回到前台的检查，计时周期另由单测和mock浏览器用例覆盖。
+ await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
+ await expect.poll(() => renewals).toContain(200)
+ expect(renewals).toContain(403)
+ await expect(page.getByText('本地服务运行中')).toBeVisible()
+ const expiry = await context.request.post('/__fixture/expire', { headers: { 'X-Fixture-Key': key } })
+ expect(expiry.status()).toBe(200)
+ await page.getByRole('button', { name: '刷新', exact: true }).click()
+ await expect(page.getByText('管理认证已失效', { exact: true })).toBeVisible()
+ await page.screenshot({ path: 'test-results-integration/auth-expired-desktop.png', fullPage: true })
+ await page.evaluate(token => { location.hash = `token=${token}` }, await bootstrap())
+ await expect(page.getByText('本地服务运行中')).toBeVisible()
+ expect(new URL(page.url()).hash).toBe('')
+ await page.screenshot({ path: 'test-results-integration/auth-restored-desktop.png', fullPage: true })
+ await page.setViewportSize({ width: 390, height: 844 })
+ await page.screenshot({ path: 'test-results-integration/auth-restored-mobile.png', fullPage: true })
+ await other.close()
+})

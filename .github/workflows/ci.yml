@@ -36,7 +36,7 @@ jobs:
       - name: Go vet
         run: go vet ./cmd/... ./internal/...
       - name: Go tests
-        run: go test ./cmd/... ./internal/... -count=1 -timeout 180s
+        run: go test ./cmd/... ./internal/... -count=1 -timeout 600s
       - name: Go race tests
         run: |
           $compilers = @('C:/mingw64/bin/gcc.exe', 'C:/msys64/mingw64/bin/gcc.exe', 'C:/msys64/ucrt64/bin/gcc.exe')
@@ -45,7 +45,7 @@ jobs:
           $env:PATH = (Split-Path $compiler -Parent) + [IO.Path]::PathSeparator + $env:PATH
           $env:CC = $compiler
           $env:CGO_ENABLED = '1'
-          go test -race ./cmd/... ./internal/... -count=1 -timeout 180s
+          go test -race ./cmd/... ./internal/... -count=1 -timeout 600s
       - name: Build standalone Windows binary
         env:
           CGO_ENABLED: '0'
@@ -91,7 +91,7 @@ jobs:
       - name: Browser regression tests
         run: npm --prefix frontend run test:e2e
       - name: Compile Go integration fixture before timed startup
-        run: go test ./internal/router -run '^$' -count=1 -timeout 180s
+        run: go test ./internal/router -run '^$' -count=1 -timeout 600s
       - name: Production UI and real Go API integration
         run: npm --prefix frontend run test:integration
       - name: Upload synthetic browser evidence

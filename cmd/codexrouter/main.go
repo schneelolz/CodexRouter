@@ -18,10 +18,12 @@ import (
 
 	"codexrouter/internal/clients"
 	"codexrouter/internal/daily"
+	"codexrouter/internal/diaglog"
 	"codexrouter/internal/instance"
 	"codexrouter/internal/platform"
 	"codexrouter/internal/router"
 	"codexrouter/internal/store"
+	"log"
 )
 
 var version = "0.4.0-test-history1"
@@ -94,7 +96,7 @@ func parseOptions(args []string, exe string) (launchOptions, error) {
 	out.data = abs
 	return out, nil
 }
-func run() error {
+func run() (runErr error) {
 	if len(os.Args) > 1 && os.Args[1] == "version" {
 		fmt.Println(version)
 		return nil
@@ -124,6 +126,22 @@ func run() error {
 		return fmt.Errorf("状态目录不可用或已有实例持锁: %w", err)
 	}
 	defer db.Close()
+	diagnosticLog, logErr := diaglog.Open(filepath.Join(o.data, "logs"), version)
+	if diagnosticLog == nil {
+		return errors.New("无法初始化诊断日志标识")
+	}
+	diagnosticLog.Emit("process_start", diaglog.Fields{"port": o.port})
+	defer func() {
+		reason := "normal"
+		if runErr != nil {
+			reason = "startup_or_serve_failed"
+		}
+		diagnosticLog.Emit("process_stop", diaglog.Fields{"reason": reason})
+		diagnosticLog.Close()
+	}()
+	if logErr != nil {
+		fmt.Fprintln(os.Stderr, "诊断日志暂不可写；服务继续运行，请查看近期诊断。")
+	}
 	creds, err := platform.OpenCredentials(o.data)
 	if err != nil {
 		return err
@@ -147,12 +165,13 @@ func run() error {
 		// 日常路径不可安全确定时仅禁用此功能，保留路由和独立测试。
 		dailyManager, _ = daily.Discover("http://"+address, o.data)
 	}
-	svc, err := router.New(router.Options{HistoryPath: filepath.Join(o.data, "history.sqlite"), Store: db, Credentials: creds, Authority: address, DevOrigin: o.origin, UIDir: o.ui, Clients: manager, Daily: dailyManager})
+	svc, err := router.New(router.Options{Log: diagnosticLog, HistoryPath: filepath.Join(o.data, "history.sqlite"), Store: db, Credentials: creds, Authority: address, DevOrigin: o.origin, UIDir: o.ui, Clients: manager, Daily: dailyManager})
 	if err != nil {
 		return err
 	}
 	defer svc.Close()
 	openPage := func() error {
+		diagnosticLog.Emit("management_open", nil)
 		base := "http://" + address
 		if o.origin != "" {
 			base = o.origin
@@ -160,7 +179,13 @@ func run() error {
 		if o.ui == "" && o.origin == "" {
 			return errors.New("无管理页面")
 		}
-		return platform.OpenBrowser(base + "/#token=" + svc.Bootstrap())
+		err := platform.OpenBrowser(base + "/#token=" + svc.Bootstrap())
+		reason := "ok"
+		if err != nil {
+			reason = "browser_launch_failed"
+		}
+		diagnosticLog.Emit("management_open_result", diaglog.Fields{"reason": reason})
+		return err
 	}
 	key, err := creds.Get("control")
 	if err != nil {
@@ -179,6 +204,7 @@ func run() error {
 		svc.ServeHTTP(w, r)
 	})
 	host := router.HTTPServer(address, handler)
+	host.ErrorLog = log.New(router.DiagnosticHTTPWriter(diagnosticLog), "", 0)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 	record := instanceRecord{1, o.port}
@@ -215,6 +241,7 @@ func run() error {
 			}
 		}()
 	}
+	diagnosticLog.Emit("process_ready", diaglog.Fields{"port": o.port})
 	fmt.Printf("CodexRouter %s 运行成功，仅本机 %s；输入open打开设置，quit退出。\n", version, address)
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- host.Serve(ln); stop() }()
