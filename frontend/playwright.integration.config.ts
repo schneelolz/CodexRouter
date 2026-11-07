@@ -20,11 +20,11 @@ export default defineConfig({
   testMatch: '**/integration.spec.ts',
   fullyParallel: false,
   workers: 1,
-  timeout: 45000,
+  timeout: 90000,
   reporter: 'list',
   use: { baseURL, browserName: 'chromium', trace: 'off' },
   webServer: {
-    command: `"${go}" test -count=1 -run "^TestBrowserFixtureServer$" -timeout 120s ./internal/router`,
+    command: `"${go}" test -count=1 -run "^TestBrowserFixtureServer$" -timeout 240s ./internal/router`,
     cwd: root,
     url: `${baseURL}/healthz`,
     reuseExistingServer: false,

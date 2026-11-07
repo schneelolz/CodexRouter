@@ -20,6 +20,7 @@ macOS 实现基于公开基线 `a531544`，与 Windows 共用 Go 路由核心、
 | `cmd/codexrouter` | 参数、GUI/前台入口、托盘、启动及退出 |
 | `internal/router` | 管理 API、固定供应商路由、流式转发、结果与用量观察 |
 | `internal/store` | JSON 状态、原子写入与进程锁 |
+| `internal/diaglog` | 有界异步JSON日志、轮转、重启恢复与降级计数 |
 | `internal/history` | SQLite 请求、分页、策略、待登记及绑定查询投影 |
 | `internal/clients` | 独立测试客户端配置、检测与 owned 进程回收 |
 | `internal/daily` | 原客户端连接字段预览、备份与恢复 |

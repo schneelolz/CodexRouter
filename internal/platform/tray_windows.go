@@ -115,7 +115,7 @@ func windowsTray(ctx context.Context, open func() error, quit func()) error {
 		}
 		switch msg {
 		case 0x8001:
-			if lp == 0x203 || lp == 0x202 {
+			if lp == 0x203 {
 				if err := open(); err != nil {
 					go Message("CodexRouter", "打开管理页面失败，请重试。", true)
 				}

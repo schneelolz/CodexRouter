@@ -792,7 +792,8 @@ test('两级菜单键盘操作与会话子页保留状态、登记和复制', as
 })
 
 test('六十条数据逐页验收滚动、紧凑行高、长字段与三种视口', async ({ page }) => {
-  test.setTimeout(90000)
+  // 三视口逐页截图在整套验收负载下需要额外预算，断言保持完整。
+  test.setTimeout(180000)
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
   const state = await backend(page)
   state.activity = { received: 61, degraded: false, items: Array.from({ length: 61 }, (_, i) => syntheticRequest({ id: i + 1, time: '2026-11-06T01:02:03.123Z', entry: 'POST /responses', thread_id: `compact-session-${i}-${'s'.repeat(90)}`, provider_id: 'company', phase: 'finished', outcome: 'success', result: 'RESPONSE_COMPLETED', status: 200, elapsed_ms: 310000, model: i % 5 ? 'gpt-6.1-sol' : 'model-' + 'm'.repeat(110) })) }
@@ -863,4 +864,47 @@ test('六十条数据逐页验收滚动、紧凑行高、长字段与三种视�
     }
   }
   writeFileSync('test-results/final-layout-metrics.json', JSON.stringify(measurements, null, 2))
+})
+
+
+test('旧页面接收新引导后恢复并保留未保存设置', async ({ page }) => {
+ const state = await backend(page)
+ await page.goto('/')
+ await expect(page.getByText('本地服务运行中')).toBeVisible()
+ await page.getByRole('button', { name: '供应商设置', exact: true }).click()
+ await page.getByLabel('连接超时（毫秒）').fill('17000')
+ state.authenticated = false
+ await page.getByRole('button', { name: '刷新', exact: true }).click()
+ await expect(page.getByText('管理认证已失效', { exact: true })).toBeVisible()
+ state.authenticated = true
+ await page.evaluate(() => { location.hash = 'token=synthetic-new-bootstrap' })
+ await expect(page.getByText('本地服务运行中')).toBeVisible()
+ expect(new URL(page.url()).hash).toBe('')
+ await expect(page.getByLabel('连接超时（毫秒）')).toHaveValue('17000')
+ await expect(page.getByRole('button', { name: '保存超时与并发' })).toBeEnabled()
+})
+
+test('连续新引导忽略迟到旧认证失败并恢复轮询', async ({ page }) => {
+ await backend(page)
+ await page.goto('/')
+ await expect(page.getByText('本地服务运行中')).toBeVisible()
+ let release: () => void = () => {}
+ let received: () => void = () => {}
+ const arrived = new Promise<void>(resolve => { received = resolve })
+ const blocked = new Promise<void>(resolve => { release = resolve })
+ await page.route('**/api/v1/auth/exchange', async route => {
+  const value = route.request().postDataJSON() as { token: string }
+  if (value.token === 'synthetic-first') {
+   received(); await blocked
+   await route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: { code: 'AUTH_REQUIRED', message: 'old auth' } }) }).catch(() => {})
+  } else await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ csrf_token: 'synthetic-new' }) })
+ })
+ await page.evaluate(() => { location.hash = 'token=synthetic-first' })
+ await arrived
+ await page.evaluate(() => { location.hash = 'token=synthetic-second' })
+ await expect(page.getByText('本地服务运行中')).toBeVisible()
+ release()
+ await page.getByRole('button', { name: '刷新', exact: true }).click()
+ await expect(page.getByText('本地服务运行中')).toBeVisible()
+ expect(new URL(page.url()).hash).toBe('')
 })

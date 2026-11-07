@@ -10,7 +10,7 @@ Windows / macOS 本机路由 · 会话固定绑定 · 请求用量与延迟 · �
 
 [中文](README.md) · [English](README.en.md)
 
-[![CI](https://github.com/schneelolz/CodexRouter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/schneelolz/CodexRouter/actions/workflows/ci.yml) [![Candidate](https://img.shields.io/badge/candidate-0.8.0--test--compact--ui1-2563eb)](docs/ui-layout.md) [![Windows](https://img.shields.io/badge/platform-Windows_x64-0078D4)](#快速开始) [![Go](https://img.shields.io/badge/backend-Go-00ADD8?logo=go&logoColor=white)](go.mod) [![Vue](https://img.shields.io/badge/frontend-Vue_3-42B883?logo=vuedotjs&logoColor=white)](frontend/package.json) [![License](https://img.shields.io/badge/license-AGPL--3.0--only-f97316)](LICENSE)
+[![CI](https://github.com/schneelolz/CodexRouter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/schneelolz/CodexRouter/actions/workflows/ci.yml) [![Candidate](https://img.shields.io/badge/candidate-0.9.0--test--diagnostics--auth1-2563eb)](docs/ui-layout.md) [![Windows](https://img.shields.io/badge/platform-Windows_x64-0078D4)](#快速开始) [![Go](https://img.shields.io/badge/backend-Go-00ADD8?logo=go&logoColor=white)](go.mod) [![Vue](https://img.shields.io/badge/frontend-Vue_3-42B883?logo=vuedotjs&logoColor=white)](frontend/package.json) [![License](https://img.shields.io/badge/license-AGPL--3.0--only-f97316)](LICENSE)
 
 [快速开始](#快速开始) · [核心功能](#核心功能) · [使用说明](docs/quick-start.md) · [开发文档](docs/handoff.md)
 
@@ -41,9 +41,10 @@ flowchart LR
 | 延迟与速率 | 查看首字、总耗时和 TPS；双色柱分别表示首字与总耗时的健康分档 |
 | 历史管理 | 后端分页查询、设置保留天数、确认清理；清理请求记录不会删除会话绑定 |
 | 日常接入与恢复 | 预览并确认 Codex 连接地址变更，保留原登录、历史和项目目录，支持恢复原连接值 |
+| 持久诊断日志 | 轮转保存连接阶段、流式收尾、认证事件和上游请求ID，重启后可继续排查 |
 | 本机托盘 | 双击启动并打开管理页，关闭网页后继续运行；重复启动尝试唤起已有实例 |
 
-管理界面采用“请求管理 / 会话管理”两级菜单、紧凑表格和独立数据滚动区。指标缺失与真实零值分开显示，HTTP 200 中的生成失败也会归入错误。详见[页面与指标说明](docs/ui-layout.md)。
+管理界面采用“请求管理 / 会话管理”两级菜单、紧凑表格和独立数据滚动区。指标缺失与真实零值分开显示，HTTP 200 中的生成失败也会归入错误。详见[页面与指标说明](docs/ui-layout.md)。管理页面支持重新引导和多标签续期恢复，日志使用方式见[故障诊断](docs/diagnostics.md)。
 
 ## 快速开始
 
@@ -63,7 +64,7 @@ bash scripts/build-macos.sh --out artifacts/macos-local --version 0.8.0-macos-de
 ```powershell
 git clone https://github.com/schneelolz/CodexRouter.git
 cd CodexRouter
-.\scripts\build.ps1 -OutputDir artifacts\build-local -Version 0.8.0-test-compact-ui1
+.\scripts\build.ps1 -OutputDir artifacts\build-local -Version 0.9.0-test-diagnostics-auth1
 ```
 
 产物包含 `codexrouter.exe` 和相邻的 `ui/` 目录，请一起保留。构建后的程序无需安装 Go、Node.js 或 Python。版本标签由 `-Version` 显式指定。
@@ -91,7 +92,7 @@ cd CodexRouter
 
 ## 当前状态
 
-当前为 **0.8 候选版**，管理 API **1.8**，请求历史 SQLite schema **3**。适合开发验证与受控试用，实际支持范围见[验收状态](docs/acceptance-matrix.md)。
+当前为 **0.9 候选版**，管理 API **1.8**，请求历史 SQLite schema **3**。适合开发验证与受控试用，实际支持范围见[验收状态](docs/acceptance-matrix.md)。
 
 | 范围 | 当前状态 |
 |---|---|

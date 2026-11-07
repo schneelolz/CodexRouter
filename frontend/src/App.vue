@@ -29,12 +29,13 @@ const isListPage = computed(() => ['requests', 'sessions-pending', 'sessions-bou
 const sessionKind = computed(() => panel.value === 'sessions-pending' ? 'pending' : 'bound')
 function navigate(value: Panel) { panel.value = value; notice.value = ''; actionError.value = ''; configNotice.value = '' }
 async function changeSessionSize(value: number) { sessionLimits[sessionKind.value] = value; await turnSessions(sessionKind.value, 'reset') }
-const api = new ApiClient()
-const lifetime = new AbortController()
+let api = new ApiClient()
+let lifetime = new AbortController()
 let bootstrapToken = consumeBootstrap(window.location, window.history)
 let timer: ReturnType<typeof setTimeout> | undefined
 let refreshing = false
 let stopRenewal: (() => void) | undefined
+const connectionEpoch = ref(0)
 const loading = ref(true)
 const connection = ref<'connecting' | 'connected' | 'disconnected' | 'unauthorized' | 'incompatible'>('connecting')
 const error = ref('')
@@ -155,7 +156,7 @@ function chooseModel(id: string) {
   modelOpen.value = false
 }
 const usable = (p: Provider) => p.base_url !== ''
-const providerName = (id: string) => providers.value.find(x => x.id === id)?.name ?? id
+const providerName = (id: string) => id === 'local' ? '本机服务' : providers.value.find(x => x.id === id)?.name ?? id
 const providerStatus = (id: string) => status.value?.upstreams.find(x => x.provider_id === id)
 const formatTime = (time: string) => time ? formatTimestamp(time) : '尚无记录'
 const stateLabel = (value?: ProviderStatus) => !value || value.result === 'unverified' ? '未验证' : value.result === 'success' ? '最近成功' : '最近失败'
@@ -217,13 +218,14 @@ function applyProviders(next: Provider[]) {
 
 async function refresh() {
   if (refreshing || lifetime.signal.aborted) return
+  const scope = lifetime
   refreshing = true
   pageLoading.value = true
   try {
     const [nextStatus, nextBound, nextPending, nextDiagnostics, nextCapabilities, nextConfig, nextProviders, nextClients, nextDaily, nextActivity] = await Promise.all([
       api.status(lifetime.signal), readSessionPage('bound'), readSessionPage('pending'), api.diagnostics(lifetime.signal), api.capabilities(lifetime.signal), api.config(lifetime.signal), api.providers(lifetime.signal), api.clients(lifetime.signal), api.daily(lifetime.signal), api.activity(lifetime.signal),
     ])
-    if (lifetime.signal.aborted) return
+    if (scope !== lifetime || scope.signal.aborted) return
     assertCompatible(nextCapabilities)
     applyConfig(nextConfig)
     applyProviders(nextProviders.items)
@@ -243,60 +245,75 @@ async function refresh() {
     connection.value = 'connected'
     error.value = ''
   } catch (value) {
-    if (!lifetime.signal.aborted) handleError(value)
-  } finally { refreshing = false; pageLoading.value = false }
+    if (scope === lifetime && !scope.signal.aborted) handleError(value)
+  } finally { if (scope === lifetime) { refreshing = false; pageLoading.value = false } }
 }
 
 function schedule() {
   clearTimeout(timer)
   if (lifetime.signal.aborted || ['unauthorized', 'incompatible'].includes(connection.value)) return
+  const scope = lifetime
   timer = setTimeout(async () => {
+    if (scope !== lifetime || scope.signal.aborted) return
     if (document.visibilityState !== 'hidden') await refresh()
-    schedule()
+    if (scope === lifetime) schedule()
   }, 5000)
 }
 
 async function connect() {
+  lifetime.abort()
+  lifetime = new AbortController()
+  api = new ApiClient()
+  connectionEpoch.value++
+  const scope = lifetime
+  const currentApi = api
+  refreshing = false
+  busy.value = false
+  stopRenewal?.(); stopRenewal = undefined
   loading.value = true
   error.value = ''
   connection.value = 'connecting'
   clearTimeout(timer)
   try {
     const token = bootstrapToken
-    await api.authenticate(token, lifetime.signal)
     bootstrapToken = null
-    const nextCapabilities = await api.capabilities(lifetime.signal)
+    await currentApi.authenticate(token, scope.signal)
+    if (scope !== lifetime || scope.signal.aborted) return
+    const nextCapabilities = await currentApi.capabilities(scope.signal)
+    const nextConfig = await currentApi.config(scope.signal)
+    const nextProviders = await currentApi.providers(scope.signal)
+    if (scope !== lifetime || scope.signal.aborted) return
     assertCompatible(nextCapabilities)
     capabilities.value = nextCapabilities
-    applyConfig(await api.config(lifetime.signal))
-    applyProviders((await api.providers(lifetime.signal)).items)
+    applyConfig(nextConfig)
+    applyProviders(nextProviders.items)
     await refresh()
-    if (!error.value) {
-      stopRenewal?.()
-      stopRenewal = startSessionRenewal(() => api.renew(lifetime.signal), handleError)
+    if (scope === lifetime && !scope.signal.aborted && !error.value) {
+      stopRenewal = startSessionRenewal(() => currentApi.renew(scope.signal), value => { if (scope === lifetime && !scope.signal.aborted) handleError(value) })
     }
   } catch (value) {
-    if (!lifetime.signal.aborted) handleError(value)
+    if (scope === lifetime && !scope.signal.aborted) handleError(value)
   } finally {
-    loading.value = false
-    schedule()
+    if (scope === lifetime) { loading.value = false; schedule() }
   }
 }
 
 async function act(work: () => Promise<void>, success: string) {
   if (!canWrite.value) return
+  const scope = lifetime
   busy.value = true
   actionError.value = ''
   notice.value = ''
   try {
     await work()
+    if (scope !== lifetime || scope.signal.aborted) return
     notice.value = success
     await refresh()
   } catch (value) {
-    if (lifetime.signal.aborted) return
+    if (scope !== lifetime || scope.signal.aborted) return
     if (value instanceof ApiError && (value.status === 401 || value.status === 403 || value.code === 'BACKEND_UNREACHABLE')) handleError(value)
     actionError.value = value instanceof Error ? value.message : '保存失败，请重试。'
-  } finally { busy.value = false }
+  } finally { if (scope === lifetime) busy.value = false }
 }
 
 const configInput = (defaultProvider: string, timeouts: Config) => ({
@@ -363,7 +380,13 @@ async function registerSession(id: string) {
 function visibilityChanged() {
   if (document.visibilityState === 'visible' && connection.value === 'connected') void refresh()
 }
-onMounted(() => { void connect(); document.addEventListener('visibilitychange', visibilityChanged) })
+function bootstrapChanged() {
+  const token = consumeBootstrap(window.location, window.history)
+  if (token === null) return
+  bootstrapToken = token
+  void connect()
+}
+onMounted(() => { void connect(); document.addEventListener('visibilitychange', visibilityChanged); window.addEventListener('hashchange', bootstrapChanged) })
 onUnmounted(() => {
   stopRenewal?.()
   lifetime.abort()
@@ -371,6 +394,7 @@ onUnmounted(() => {
   for (const id of Object.keys(providerKeys)) delete providerKeys[id]
   newProvider.key = ''
   document.removeEventListener('visibilitychange', visibilityChanged)
+  window.removeEventListener('hashchange', bootstrapChanged)
 })
 </script>
 
@@ -434,8 +458,8 @@ onUnmounted(() => {
               <p class="protocol-note">兼容性验收尚未完成。当前支持 {{ capabilities?.transports.join('、') || '未读取' }}；CLI、桌面版与各供应商实机结果以交付验证记录为准。</p>
             </section>
 
-            <RequestHistory v-if="panel === 'requests'" :api="api" :writable="canWrite" :provider-name="providerName" @failure="handleError" />
-            <HistoryManagement v-if="panel === 'history'" :api="api" :writable="canWrite" @failure="handleError" />
+            <RequestHistory :key="connectionEpoch" v-if="panel === 'requests'" :api="api" :writable="canWrite" :provider-name="providerName" @failure="handleError" />
+            <HistoryManagement :key="connectionEpoch" v-if="panel === 'history'" :api="api" :writable="canWrite" @failure="handleError" />
 
             <section v-if="panel === 'clients'" aria-label="客户端与接入">
               <div class="client-tabs" role="group" aria-label="使用环境"><button :aria-pressed="clientView === 'daily'" :class="{active: clientView === 'daily'}" @click="clientView = 'daily'">日常使用</button><button :aria-pressed="clientView === 'test'" :class="{active: clientView === 'test'}" @click="clientView = 'test'">独立测试</button></div>

@@ -102,10 +102,17 @@ func TestIsolatedTrayWindowLifecycle(t *testing.T) {
 	message, _, _ := user32.NewProc("RegisterWindowMessageW").Call(uintptr(unsafe.Pointer(name)))
 	postMessage.Call(ownWindow, message, 0, 0)
 	postMessage.Call(ownWindow, 0x8001, 0, 0x202)
+	postMessage.Call(ownWindow, 0x8001, 0, 0x203)
+	postMessage.Call(ownWindow, 0x8001, 0, 0x202)
 	select {
 	case <-opened:
 	case <-time.After(3 * time.Second):
 		t.Fatal("托盘打开动作未调用")
+	}
+	select {
+	case <-opened:
+		t.Fatal("双击重复触发打开")
+	case <-time.After(100 * time.Millisecond):
 	}
 	cancel()
 	select {

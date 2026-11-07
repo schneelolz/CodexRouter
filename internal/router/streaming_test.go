@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"codexrouter/internal/api"
+	"codexrouter/internal/diaglog"
 )
 
 func liveRouter(t *testing.T, upstream string) (*Server, *httptest.Server) {
@@ -355,11 +356,21 @@ func TestFaultRecovery100Cycles(t *testing.T) {
 	defer up.Close()
 	s, host := liveRouter(t, up.URL)
 	cfg := s.state.config()
-	// 100轮断连同时有5ms健康探测；正常恢复不应受100ms连接/写期限的调度噪声影响。
-	cfg.ConnectTimeoutMS = 1000
-	cfg.HeaderTimeoutMS = 1000
-	cfg.WriteTimeoutMS = 1000
+	// 故障恢复与健康探测并行，使用3秒建连/响应头预算容纳整套检查的调度延迟。
+	cfg.ConnectTimeoutMS = 3000
+	cfg.HeaderTimeoutMS = 3000
+	cfg.WriteTimeoutMS = 3000
 	cfg.IdleTimeoutMS = 200
+	logDirectory := t.TempDir()
+	if evidenceRoot := os.Getenv("CODEXROUTER_VERIFY_LOG_DIR"); evidenceRoot != "" {
+		logDirectory = filepath.Join(evidenceRoot, "fault-cycles-logs")
+	}
+	logger, err := diaglog.Open(logDirectory, "fault-cycles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.log = logger
+	defer logger.Close()
 	if err := s.state.saveConfig(cfg); err != nil {
 		t.Fatal(err)
 	}

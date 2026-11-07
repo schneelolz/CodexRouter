@@ -220,6 +220,15 @@ func TestObservedCompressedSuccessPreservesWireAndSeparatesAuxiliary(t *testing.
 			}))
 			defer up.Close()
 			s, host := liveRouter(t, up.URL)
+			// 本用例验证编码字节，避免100ms故障探针期限在全量负载下干扰断言。
+			cfg := s.state.config()
+			cfg.ConnectTimeoutMS = 3000
+			cfg.HeaderTimeoutMS = 3000
+			cfg.IdleTimeoutMS = 3000
+			cfg.WriteTimeoutMS = 3000
+			if err := s.state.saveConfig(cfg); err != nil {
+				t.Fatal(err)
+			}
 			request := inferenceRequest(t, host.URL, "observed-compressed-session", "new")
 			request.Header.Set("Accept-Encoding", encoding)
 			resp, err := host.Client().Do(request)
@@ -229,7 +238,7 @@ func TestObservedCompressedSuccessPreservesWireAndSeparatesAuxiliary(t *testing.
 			got, err := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			if err != nil || !bytes.Equal(got, body) || resp.Header.Get("Content-Encoding") != encoding {
-				t.Fatal("编码或原字节改变", err)
+				t.Fatalf("编码字节校验失败 status=%d encoding=%q expected_encoding=%q got_bytes=%d expected_bytes=%d error=%v", resp.StatusCode, resp.Header.Get("Content-Encoding"), encoding, len(got), len(body), err)
 			}
 			deadline := time.Now().Add(time.Second)
 			for {

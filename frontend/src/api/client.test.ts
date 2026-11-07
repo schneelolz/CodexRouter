@@ -4,6 +4,39 @@ import type { FetchTransport } from './client'
 import { createMockApi } from '../mock'
 
 describe('管理 API 边界', () => {
+  it('仅续期在明确CSRF失配时读取共享会话并重试一次', async () => {
+    const calls: { path: string; csrf: string | null }[] = []
+    let renewed = 0
+    const client = new ApiClient(async (input, init) => {
+      const path = String(input); calls.push({ path, csrf: new Headers(init?.headers).get('X-CSRF-Token') })
+      if (path.endsWith('auth/renew') && ++renewed === 1) return new Response(JSON.stringify({ error: { code: 'CSRF_REQUIRED' } }), { status: 403 })
+      return new Response(JSON.stringify({ csrf_token: 'synthetic-refreshed' }))
+    })
+    await client.renew()
+    expect(calls.map(x => x.path)).toEqual(['/api/v1/auth/renew', '/api/v1/auth/session', '/api/v1/auth/renew'])
+    expect(calls[2].csrf).toBe('synthetic-refreshed')
+  })
+
+  it('失效认证和普通业务写入均不自动重试，续期重试失败直接返回', async () => {
+    for (const status of [401, 403]) {
+      const transport = vi.fn(async () => new Response(JSON.stringify({ error: { code: status === 401 ? 'AUTH_REQUIRED' : 'CSRF_REQUIRED' } }), { status }))
+      const client = new ApiClient(transport)
+      await expect(client.saveKey('company', 'synthetic')).rejects.toMatchObject({ status })
+      expect(transport).toHaveBeenCalledTimes(1)
+      transport.mockClear()
+      await expect(client.renew()).rejects.toMatchObject({ status })
+      expect(transport).toHaveBeenCalledTimes(status === 401 ? 1 : 2)
+    }
+    let attempts = 0
+    const client = new ApiClient(async input => {
+      if (String(input).endsWith('auth/session')) return new Response(JSON.stringify({ csrf_token: 'synthetic' }))
+      attempts++
+      return new Response(JSON.stringify({ error: { code: 'CSRF_REQUIRED' } }), { status: 403 })
+    })
+    await expect(client.renew()).rejects.toMatchObject({ status: 403 })
+    expect(attempts).toBe(2)
+  })
+
   it('默认传输保留浏览器 fetch 的全局接收者', async () => {
     vi.stubGlobal('fetch', function (this: unknown) {
       if (this !== globalThis) throw new TypeError('Illegal invocation')
