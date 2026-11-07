@@ -68,10 +68,28 @@ type Manager struct {
 // 平台实现于初始化时安装；缺少平台适配时明确拒绝启动客户端。
 var detect = func() map[string]installation { return map[string]installation{} }
 var detectCLI = func() installation { return detect()["cli"] }
+var resolveProbeExecutable = func(path string) (string, error) { return path, nil }
+
+// ProbeExecutable resolves an installed CLI without running a model or reading user credentials.
+func ProbeExecutable(path string) (string, error) {
+	if path == "" {
+		path = detectCLI().Path
+	}
+	if path == "" {
+		return "", errors.New("CLIENT_NOT_INSTALLED")
+	}
+	return resolveProbeExecutable(path)
+}
+
 var startOwned = func(*exec.Cmd, bool) (func(), error) { return nil, errors.New("当前平台未实现客户端启动") }
 var openConsole = func() error { return errors.New("当前平台未实现客户端窗口") }
 var hideCommand = func(*exec.Cmd) {}
 var replace = os.Rename
+var clientPolicy = func(string, string) error { return nil }
+var describeClient = func(*Client) {}
+var testCommand func(string, installation, string) *exec.Cmd
+var clientCompleted = func(string, string) string { return "" }
+var isolateEnvironment = func(env []string, _ string) []string { return env }
 
 // New 创建专用客户端管理器；base 必须是本机 HTTP 基址。
 func New(root, base string) (*Manager, error) {
@@ -243,7 +261,7 @@ func Environment(parent []string, profile, base string) []string {
 	if base != "" {
 		clean = append(clean, "CODEX_APP_SERVER_OPENAI_BASE_URL="+base)
 	}
-	return clean
+	return isolateEnvironment(clean, profile)
 }
 
 // Status 只报告安装信息、专用配置模式与由本管理器跟踪的进程。
@@ -267,6 +285,7 @@ func (m *Manager) Status() Status {
 			item.State = "running"
 			item.Message = "专用客户端已启动；是否登录和生成成功请在客户端确认"
 		}
+		describeClient(&item)
 		if m.last[target] != "" {
 			item.Message = m.last[target]
 		}
@@ -306,6 +325,10 @@ func (m *Manager) Action(in Input) (Status, error) {
 	if active != nil {
 		m.mu.Unlock()
 		return Status{}, errors.New("CLIENT_RUNNING")
+	}
+	if err := clientPolicy(in.Target, in.Action); err != nil {
+		m.mu.Unlock()
+		return Status{}, err
 	}
 	requested := ""
 	if in.Action == "direct" || in.Action == "routed" {
@@ -359,7 +382,9 @@ func (m *Manager) Action(in Input) (Status, error) {
 		return m.Status(), nil
 	}
 	var cmd *exec.Cmd
-	if in.Target == "desktop" {
+	if testCommand != nil {
+		cmd = testCommand(in.Target, install, profile)
+	} else if in.Target == "desktop" {
 		cmd = exec.Command(install.Path, "--user-data-dir="+filepath.Join(profile, "user-data"), "--open-project", filepath.Join(profile, "work"))
 	} else {
 		cmd = exec.Command(m.helper, "client-console", "--profile", profile, "--action", in.Action)
@@ -383,6 +408,8 @@ func (m *Manager) Action(in Input) (Status, error) {
 			delete(m.active, in.Target)
 			if err != nil {
 				m.last[in.Target] = "专用客户端已退出，请在客户端检查登录或启动错误"
+			} else {
+				m.last[in.Target] = clientCompleted(in.Target, in.Action)
 			}
 		}
 		m.mu.Unlock()

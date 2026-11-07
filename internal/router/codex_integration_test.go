@@ -3,6 +3,7 @@ package router
 import (
 	"bufio"
 	"bytes"
+	"codexrouter/internal/clients"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -31,18 +32,26 @@ func TestIsolatedCodexCLIRoutesNewResumeForkAndRestart(t *testing.T) {
 			t.Fatal("隔离集成测试需要本机 Codex CLI")
 		}
 	}
-	versionCtx, versionCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	version, err := exec.CommandContext(versionCtx, exe, "--version").Output()
-	versionCancel()
-	if err != nil || !strings.Contains(string(version), "0.166.0") {
-		t.Fatal("此协议集成测试仅验收 Codex CLI 0.166.0")
+	var resolveErr error
+	exe, resolveErr = clients.ProbeExecutable(exe)
+	if resolveErr != nil {
+		t.Fatal(resolveErr)
 	}
 	root := t.TempDir()
-	home, work := filepath.Join(root, "home"), filepath.Join(root, "work")
-	for _, dir := range []string{home, work} {
+	home, work := filepath.Join(root, "codex-home"), filepath.Join(root, "work")
+	for _, dir := range []string{home, work, filepath.Join(root, "home")} {
 		if err := os.Mkdir(dir, 0700); err != nil {
 			t.Fatal(err)
 		}
+	}
+	isolatedEnv := clients.Environment(os.Environ(), root, "")
+	versionCtx, versionCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	versionCmd := exec.CommandContext(versionCtx, exe, "--version")
+	versionCmd.Env, versionCmd.Dir = isolatedEnv, work
+	version, err := versionCmd.Output()
+	versionCancel()
+	if err != nil || !strings.Contains(string(version), "0.166.0") {
+		t.Fatal("此协议集成测试仅验收 Codex CLI 0.166.0")
 	}
 	const officialKey = "synthetic-codex-integration-official"
 	auth, _ := json.Marshal(map[string]string{"OPENAI_API_KEY": officialKey})
@@ -116,8 +125,8 @@ func TestIsolatedCodexCLIRoutesNewResumeForkAndRestart(t *testing.T) {
 	if err := s.creds.Set("company", "synthetic-company"); err != nil {
 		t.Fatal(err)
 	}
-	env := make([]string, 0, len(os.Environ())+3)
-	for _, entry := range os.Environ() {
+	env := make([]string, 0, len(isolatedEnv)+3)
+	for _, entry := range isolatedEnv {
 		key, _, _ := strings.Cut(entry, "=")
 		upper := strings.ToUpper(key)
 		if strings.HasPrefix(upper, "OPENAI_") || strings.HasPrefix(upper, "CODEX_") || strings.HasPrefix(upper, "CHATGPT_") || upper == "HTTP_PROXY" || upper == "HTTPS_PROXY" || upper == "ALL_PROXY" || upper == "NO_PROXY" {
@@ -129,8 +138,8 @@ func TestIsolatedCodexCLIRoutesNewResumeForkAndRestart(t *testing.T) {
 	run := func(label string, action []string, want string) string {
 		t.Helper()
 		beforeOfficial, beforeCompany := officialCalls.Load(), companyCalls.Load()
-		args := append([]string{"--no-daemon", "exec"}, action...)
-		args = append(args, "--skip-git-repo-check", "--ignore-user-config", "--ignore-rules", "--json", "-c", `model_provider="openai"`, "-c", `openai_base_url="`+host.URL+`"`, "-c", `chatgpt_base_url="`+host.URL+`"`, "-c", `web_search="disabled"`, "-c", "analytics.enabled=false", "-c", "feedback.enabled=false", "Return only the synthetic probe result. Do not use tools.")
+		args := append([]string{"--no-daemon", "--sandbox", "read-only", "exec"}, action...)
+		args = append(args, "--skip-git-repo-check", "--ignore-user-config", "--ignore-rules", "--json", "-c", "features.shell_tool=false", "-c", "features.unified_exec=false", "-c", "features.code_mode=false", "-c", "features.apply_patch_freeform=false", "-c", `model_provider="openai"`, "-c", `openai_base_url="`+host.URL+`"`, "-c", `chatgpt_base_url="`+host.URL+`"`, "-c", `web_search="disabled"`, "-c", "analytics.enabled=false", "-c", "feedback.enabled=false", "Return only the synthetic probe result. Do not use tools.")
 		ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 		defer cancel()
 		cmd := exec.CommandContext(ctx, exe, args...)

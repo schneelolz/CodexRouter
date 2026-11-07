@@ -11,13 +11,22 @@ import (
 	"testing"
 )
 
+func privateTempDir(t *testing.T) string {
+	t.Helper()
+	dir := filepath.Join(t.TempDir(), "private")
+	if err := os.Mkdir(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
 type testDocument struct {
 	Version int      `json:"version"`
 	Values  []string `json:"values"`
 }
 
 func TestRoundTripAndExclusiveLock(t *testing.T) {
-	dir := t.TempDir()
+	dir := privateTempDir(t)
 	s, err := Open(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -76,7 +85,7 @@ func TestLockSubprocess(t *testing.T) {
 }
 
 func TestCorruptionNeverReplaced(t *testing.T) {
-	dir := t.TempDir()
+	dir := privateTempDir(t)
 	s, err := Open(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -98,7 +107,7 @@ func TestCorruptionNeverReplaced(t *testing.T) {
 }
 
 func TestRejectedWritesPreserveLastState(t *testing.T) {
-	dir := t.TempDir()
+	dir := privateTempDir(t)
 	s, err := Open(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -139,7 +148,7 @@ func TestRejectedWritesPreserveLastState(t *testing.T) {
 }
 
 func TestPathAndSizeBounds(t *testing.T) {
-	dir := t.TempDir()
+	dir := privateTempDir(t)
 	s, err := Open(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -162,7 +171,7 @@ func TestPathAndSizeBounds(t *testing.T) {
 }
 
 func TestConcurrentReadWriteAndClose(t *testing.T) {
-	s, err := Open(t.TempDir())
+	s, err := Open(privateTempDir(t))
 	if err != nil {
 		t.Fatal(err)
 	}

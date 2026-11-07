@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -379,6 +380,23 @@ func TestCredentialBackendFailurePreventsServerStartup(t *testing.T) {
 		}
 		if err == nil {
 			t.Fatal("控制凭据无法读写时仍启动服务")
+		}
+	}
+}
+
+func TestControlCredentialStartupErrorOnlyExposesTypedStatus(t *testing.T) {
+	for _, e := range []error{errors.New("synthetic-secret-must-not-appear"), fmt.Errorf("synthetic-secret-must-not-appear: %w", &platform.CredentialError{Status: -25293})} {
+		s, err := New(Options{Store: &testPersistence{}, Credentials: &testCredentials{getErr: e}, Authority: "127.0.0.1:18788"})
+		if s != nil {
+			s.Close()
+			t.Fatal("credential failure allowed startup")
+		}
+		if err == nil || strings.Contains(err.Error(), "synthetic-secret") {
+			t.Fatal("backend details leaked or failure ignored")
+		}
+		var status *platform.CredentialError
+		if errors.As(e, &status) && !strings.Contains(err.Error(), "-25293") {
+			t.Fatal("safe native status hidden")
 		}
 	}
 }

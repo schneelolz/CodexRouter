@@ -407,6 +407,26 @@ test('后台首次绑定及时锁定地址，保留未保存设置和供应商�
   await expect(page.getByLabel('连接超时（毫秒）')).toHaveValue('24000')
 })
 
+test('macOS 隔离能力限制与三视口显示', async ({ page }) => {
+  const state = await backend(page)
+  state.clients[0]!.state = 'probe_only'
+  state.clients[0]!.message = '仅隔离启动检查，不启动交互代理'
+  state.clients[1]!.state = 'isolation_unverified'
+  state.clients[1]!.message = '桌面多实例隔离未验证，禁止启动'
+  await page.goto('/')
+  await page.getByRole('button', { name: '客户端与接入', exact: true }).click()
+  await page.getByRole('button', { name: '独立测试', exact: true }).click()
+  await expect(page.getByRole('button', { name: '隔离启动检查', exact: true })).toBeEnabled()
+  await expect(page.getByRole('button', { name: '启动测试桌面版', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: '登录官方账号', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '恢复测试环境直连', exact: true })).toHaveCount(0)
+  for (const [width, height] of [[1440, 900], [768, 1024], [390, 844]]) {
+    await page.setViewportSize({ width, height })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: `test-results/macos-clients-${width}.png`, fullPage: true, animations: 'disabled' })
+  }
+})
+
 test('专用客户端入口、模式切换与手机布局', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await backend(page)

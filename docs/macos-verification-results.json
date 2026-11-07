@@ -1,0 +1,16 @@
+{
+  "scope": "historical macOS synthetic validation before cross-platform integration",
+  "baseline": "a531544",
+  "api_version": "1.8",
+  "sqlite_schema": 3,
+  "go_and_race_passing_events_each": 278,
+  "frontend_unit_tests": 22,
+  "mock_browser_tests": 21,
+  "go_api_browser_tests": 1,
+  "external_cli_synthetic_stages": 5,
+  "bundled_appserver_synthetic_turns": 8,
+  "intel_and_windows": "cross-compiled only; not executed",
+  "real_account_and_desktop_ui_verified": false,
+  "ci_verified": false,
+  "current_integration_results": "See docs/verification.md; historical results are not inherited."
+}

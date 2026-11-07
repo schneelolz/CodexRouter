@@ -12,11 +12,11 @@
 
 `Thread-Id` 必须合法；可用 `Session-Id` 与 `X-Codex-Turn-Metadata` 提供校验。已知 metadata 字段为 `thread_id`、`session_id`、`history_initialization`、`forked_from_thread_id`，大小上限 8192 字节。重复头、已知字段重复、null/错误类型、大小写别名、非法或自父关系均拒绝；未知 metadata 字段可保留兼容。
 
-当前仍要求提供的 thread/session 一致，不推断不同 ID 的会话树关系；已知子代理身份冲突尚未解决。会话绑定键始终为子线程 thread ID，不使用父线程或 session root 替代。
+当前要求头部/元数据的子 thread 一致，并只额外接受已由桌面内置 CLI 0.164.0-alpha.11.1 隔离复现的临时侧边聊天形状：history_initialization=warm_fork，metadata.thread_id 与 metadata.session_id 均为子 thread，Session-Id 请求头精确等于有效且不同于子的 forked_from_thread_id。内部 SessionID 采用一致的子元数据，转发给官方的原始头保持不变。子线程只有显式父已绑定才可继承供应商；未知父仍待登记，不从 session 或默认线路猜测。其他 ID 不一致仍拒绝，不能据此宣称所有子代理兼容。会话绑定键始终为子线程 thread ID，不使用父线程或 session root 替代。
 
 已有绑定优先。未知线程只有 `new` 且正文有可靠无历史的新建证据才分配当前默认供应商；assistant/工具输出、`previous_response_id` 等历史证据会阻止自动新建。`cold_resume` 或未知父来源不能使用默认供应商。
 
-`cold_fork` / `warm_fork` 仅在明确父线程已绑定时继承，子线程独立落盘；落盘成功后才发布内存绑定和转发。未知 fork 类型、`ephemeral_fork` 仍不启用。warm fork 来自独立 app-server 的明确父子关系观察，不能等同真实桌面侧边 UI 或子代理已验证。
+`cold_fork` / `warm_fork` 仅在明确父线程已绑定时继承，子线程独立落盘；落盘成功后才发布内存绑定和转发。未知 fork 类型、`ephemeral_fork` 仍不启用。warm fork 来自独立 app-server 的明确父子关系观察；其中 ephemeral=true 的临时侧边聊天也使用 warm_fork，不等同 history_initialization=ephemeral_fork。临时侧边组合已通过真实内置 app-server + 本机路由器 + 合成上游八轮验证，但更新包尚未获原正式 Keychain 条目访问权，用户真实 UI 复测仍未完成。
 
 ## 正文与身份隔离
 

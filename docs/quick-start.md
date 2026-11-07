@@ -1,5 +1,7 @@
 # 快速开始
 
+macOS 开发候选的依赖、`.app` 构建、菜单栏启动、权限与人工验收见 [macOS 说明](macos.md)。下方 Windows 可执行文件示例不应直接照搬为 macOS 命令；macOS 桌面隔离未验证时禁止启动，日常接入须用户确认。
+
 ## 启动与供应商
 
 先按 [README](../README.md) 构建，在独立数据目录和空闲端口启动。若已有构建文件夹，保留 `codexrouter.exe` 相邻的完整 `ui/`。双击使用默认数据目录与端口；重复启动会尝试唤起同一数据目录的已运行实例。
@@ -24,6 +26,6 @@
 
 ## 更新与保护
 
-更新前正常停止对应路由器，整体备份数据目录；运行时的 SQLite 附属文件不能单独复制或删除。schema 3 回滚需要配套的升级前数据副本。凭据在 Windows Credential Manager，复制目录不迁移密钥。
+更新前正常停止对应路由器，整体备份数据目录；运行时的 SQLite 附属文件不能单独复制或删除。schema 3 回滚需要配套的升级前数据副本。凭据在 Windows Credential Manager / macOS Keychain，复制目录不迁移密钥。
 
 管理入口令牌、Cookie、API Key、认证文件和运行数据均不应上传。遇到故障只提供稳定错误码、时间和必要脱敏关系。WebSocket、子代理、其他客户端版本及真实上游兼容性限制见[验收状态](acceptance-matrix.md)。

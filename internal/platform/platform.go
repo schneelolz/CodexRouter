@@ -27,10 +27,25 @@ type Credentials interface {
 	Delete(name string) error
 }
 
+// CredentialError exposes only a fixed operating-system status, never native error text or secrets.
+// It can safely be reported when other credential backend errors must be withheld.
+type CredentialError struct{ Status int }
+
+func (e *CredentialError) Error() string {
+	return fmt.Sprintf("Keychain 访问失败 (OSStatus %d)；请检查钥匙串锁定或应用访问授权，不会回退明文", e.Status)
+}
+
+// CredentialAccess is implemented by backends that can check access without returning secret bytes.
+// Authorize must only be called by an explicit local user command, never a browser action or startup.
+type CredentialAccess interface {
+	Check(name string) error
+	Authorize(name string) error
+}
+
 // Message 显示本机运行提示；Windows在初始化时安装原生实现。
 func Message(title, text string, isError bool) { messageImpl(title, text, isError) }
 
-// Tray 运行托盘循环；非Windows明确返回不支持。
+// Tray 运行 Windows 托盘或 macOS 菜单栏循环；其他平台明确返回不支持。
 func Tray(ctx context.Context, open func() error, quit func()) error {
 	return trayImpl(ctx, open, quit)
 }
